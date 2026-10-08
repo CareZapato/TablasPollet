@@ -641,6 +641,35 @@ function mostrarVista(vista) {
   if (vista === "tablas" && !estado.tabla) abrirTabla("cartera_clientes");
 }
 
+const FORMATOS_EXPORTAR = [
+  { id: "csv", etiqueta: "CSV", color: "#1a9e5c", titulo: "CSV (.zip)",
+    detalle: "Un archivo CSV por tabla, más los datos de origen y modelo.json." },
+  { id: "excel", etiqueta: "XLSX", color: "#1d6f42", titulo: "Excel (.xlsx)",
+    detalle: "Una hoja por tabla, con índice, hoja de calidad, filtros y formatos." },
+  { id: "sql", etiqueta: "SQL", color: "#336791", titulo: "PostgreSQL (.sql)",
+    detalle: "Crea el esquema con tablas, PK, FK y comentarios, e inserta los datos." },
+];
+
+function renderMenuExportar() {
+  const f = fuentes[estado.fuente];
+  const disponibles = FORMATOS_EXPORTAR.filter((fmt) => f.exportaciones?.[fmt.id]);
+  $("#btn-exportar").disabled = !disponibles.length;
+  $("#menu-exportar").innerHTML = `<div class="menu-cab">Descargar todas las tablas de <b>${f.nombre}</b></div>` +
+    disponibles.map((fmt) => {
+      const ruta = `${f.dir}/${f.exportaciones[fmt.id]}`;
+      return `<a role="menuitem" href="${ruta}" download="${ruta.split("/").pop()}">
+        <span class="formato" style="--f:${fmt.color}">${fmt.etiqueta}</span>
+        <span><b>${fmt.titulo}</b><small>${fmt.detalle}</small></span></a>`;
+    }).join("");
+}
+
+function alternarMenuExportar(abrir) {
+  const menu = $("#menu-exportar");
+  const abierto = abrir ?? menu.hidden;
+  menu.hidden = !abierto;
+  $("#btn-exportar").setAttribute("aria-expanded", abierto);
+}
+
 function usarFuente(id) {
   const f = fuentes[id];
   Object.assign(estado, { fuente: id, modelo: f.modelo, datos: f.datos });
@@ -660,6 +689,7 @@ function usarFuente(id) {
     b.setAttribute("aria-checked", activo);
   });
   document.querySelectorAll(".fuente-activa").forEach((el) => { el.textContent = f.nombre; });
+  renderMenuExportar();
 
   renderResumen();
   renderModelo();
@@ -691,6 +721,11 @@ async function iniciar() {
   document.querySelectorAll("#selector-fuente button").forEach((b) =>
     b.addEventListener("click", () => usarFuente(b.dataset.fuente)));
 
+  $("#btn-exportar").addEventListener("click", (ev) => { ev.stopPropagation(); alternarMenuExportar(); });
+  $("#menu-exportar").addEventListener("click", (ev) => { if (ev.target.closest("a")) alternarMenuExportar(false); });
+  document.addEventListener("click", (ev) => { if (!ev.target.closest(".exportar")) alternarMenuExportar(false); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") alternarMenuExportar(false); });
+
   document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.vista)));
   $("#buscar").addEventListener("input", (e) => { estado.busqueda = e.target.value; estado.pagina = 0; renderTabla(); });
   $("#pag-ant").addEventListener("click", () => { estado.pagina--; renderTabla(); });
@@ -701,8 +736,7 @@ async function iniciar() {
   }));
 
   const pedida = new URLSearchParams(location.search).get("fuente") ?? localStorage.getItem("fuente");
-  usarFuente(fuentes[pedida] ? pedida : ids[0]);
-  const inicial = location.hash.slice(1);
+  usarFuente(fuentes[pedida] ? pedida : ids[0]);  const inicial = location.hash.slice(1);
   if (document.getElementById(`vista-${inicial}`)) mostrarVista(inicial);
 }
 

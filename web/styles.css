@@ -35,6 +35,34 @@
 .selector-fuente button.active { background: #fff; color: var(--text); border-color: var(--c); box-shadow: 0 1px 3px rgba(20, 30, 60, .12); }
 .selector-fuente button.active .punto { opacity: 1; }
 
+.exportar { position: relative; }
+.btn-exportar {
+  display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 16px;
+  border: 1px solid var(--c-fuente); background: var(--c-fuente); color: #fff; border-radius: 10px;
+  font: inherit; font-weight: 600; cursor: pointer; transition: filter .15s;
+}
+.btn-exportar:hover { filter: brightness(1.08); }
+.btn-exportar:disabled { opacity: .5; cursor: default; }
+.menu-exportar {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 340px; z-index: 20;
+  background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 8px;
+  box-shadow: 0 12px 32px rgba(20, 30, 60, .16);
+}
+.menu-exportar[hidden] { display: none; }
+.menu-exportar .menu-cab { padding: 6px 10px 10px; border-bottom: 1px solid var(--border); margin-bottom: 6px; font-size: 12.5px; color: var(--muted); }
+.menu-exportar .menu-cab b { color: var(--c-fuente); }
+.menu-exportar a {
+  display: flex; gap: 12px; align-items: flex-start; padding: 9px 10px; border-radius: 8px;
+  color: var(--text); text-decoration: none;
+}
+.menu-exportar a:hover, .menu-exportar a:focus { background: var(--bg); outline: none; }
+.menu-exportar .formato {
+  flex: none; width: 42px; height: 30px; display: grid; place-items: center; border-radius: 6px;
+  font-size: 11px; font-weight: 800; color: #fff; background: var(--f);
+}
+.menu-exportar a b { display: block; font-size: 13.5px; }
+.menu-exportar a small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; margin-top: 2px; }
+
 .fuente-info {
   flex: 1; min-width: 0; text-align: right; font-size: 12.5px; color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

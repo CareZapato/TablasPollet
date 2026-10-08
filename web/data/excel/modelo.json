@@ -3,7 +3,7 @@
   "nombre": "Excel trabajado",
   "descripcion": "Hojas del Excel después de la limpieza manual (Dataset_limpio_A1/A2 y hojas 2.10).",
   "fuente": "Actividad 1 - Lavadero de datos.xlsx",
-  "generado": "2026-10-08T01:07:06",
+  "generado": "2026-10-08T01:31:00",
   "tablas": {
     "regiones": {
       "dominio": "Geografía",

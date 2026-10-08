@@ -3,12 +3,22 @@
     "id": "excel",
     "nombre": "Excel trabajado",
     "descripcion": "Hojas del Excel después de la limpieza manual (Dataset_limpio_A1/A2 y hojas 2.10).",
-    "carpeta": "excel"
+    "carpeta": "excel",
+    "exportaciones": {
+      "csv": "export/lavadero_excel_csv.zip",
+      "excel": "export/lavadero_excel.xlsx",
+      "sql": "export/lavadero_excel_postgres.sql"
+    }
   },
   {
     "id": "original",
     "nombre": "CSV originales",
     "descripcion": "Archivos originales antes de cualquier limpieza (carpeta dataoriginal).",
-    "carpeta": "original"
+    "carpeta": "original",
+    "exportaciones": {
+      "csv": "export/lavadero_original_csv.zip",
+      "excel": "export/lavadero_original.xlsx",
+      "sql": "export/lavadero_original_postgres.sql"
+    }
   }
 ]

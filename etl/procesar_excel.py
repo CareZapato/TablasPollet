@@ -31,6 +31,8 @@ from typing import Callable
 
 import pandas as pd
 
+from exportar import exportar_todo
+
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -572,7 +574,10 @@ def exportar(id_fuente: str, nombre: str, descripcion: str, archivo: str,
     }
     (carpeta / "modelo.json").write_text(json.dumps(metadatos, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"  modelo.json  ({len(metadatos['calidad'])} hallazgos de calidad)")
-    return {"id": id_fuente, "nombre": nombre, "descripcion": descripcion, "carpeta": id_fuente}
+    exportaciones = exportar_todo(carpeta, id_fuente, nombre, tablas, modelo, metadatos["calidad"])
+    print(f"  export/      {', '.join(Path(r).name for r in exportaciones.values())}")
+    return {"id": id_fuente, "nombre": nombre, "descripcion": descripcion, "carpeta": id_fuente,
+            "exportaciones": exportaciones}
 
 
 def main() -> None:

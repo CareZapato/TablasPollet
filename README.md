@@ -17,6 +17,7 @@ web/                     Sitio estático (index.html, app.js, styles.css)
 web/data/dataoriginal/   CSV originales sin limpiar (entrada)
 web/data/excel/          Resultado del ETL sobre el Excel
 web/data/original/       Resultado del ETL sobre los CSV originales
+web/data/*/export/       Descargas por fuente: CSV (.zip), Excel (.xlsx) y PostgreSQL (.sql)
 web/data/fuentes.json    Listado de fuentes disponibles en la web
 render.yaml              Configuración de despliegue en Render
 ```
@@ -27,6 +28,16 @@ render.yaml              Configuración de despliegue en Render
 pip install -r requirements.txt
 python etl/procesar_excel.py
 ```
+
+## Exportar datos
+
+El botón **Exportar datos** de la web descarga todas las tablas de la fuente activa. El ETL genera los archivos
+(`etl/exportar.py`):
+
+- **CSV (.zip)**: un CSV por tabla, los datos de origen en `origen/` y `modelo.json`.
+- **Excel (.xlsx)**: una hoja por tabla, con índice, hoja de calidad, filtros y formatos de número y fecha.
+- **PostgreSQL (.sql)**: crea el esquema `lavadero_<fuente>` con tablas, PK, FK, comentarios e inserts.
+  Cargar con `psql -d <base> -f lavadero_<fuente>_postgres.sql`.
 
 ## Ver la web en local
 
