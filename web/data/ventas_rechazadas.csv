@@ -1,0 +1,5 @@
+﻿id_transaccion,fecha_venta,id_cliente,id_producto,id_sucursal,cantidad,motivo
+TRX-2100,2026-07-18,CLI-001,PROD-999,SUC-10,3,PROD-999 no existe en productos
+TRX-2220,2026-07-24,CLI-055,PROD-999,SUC-06,5,PROD-999 no existe en productos
+TRX-2050,2026-07-02,CLI-999,PROD-103,SUC-06,3,CLI-999 no existe en clientes
+TRX-2150,2026-03-21,CLI-999,PROD-118,SUC-11,3,CLI-999 no existe en clientes

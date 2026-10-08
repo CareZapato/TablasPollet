@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: tablaspollet
+    runtime: static
+    buildCommand: echo "Sitio estatico: los CSV ya estan generados en web/data"
+    staticPublishPath: ./web
+    headers:
+      - path: /data/*
+        name: Cache-Control
+        value: no-cache

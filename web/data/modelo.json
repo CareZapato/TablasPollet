@@ -1,0 +1,617 @@
+{
+  "generado": "2026-10-08T00:11:07",
+  "fuente": "Actividad 1 - Lavadero de datos.xlsx",
+  "tablas": {
+    "regiones": {
+      "dominio": "Geografía",
+      "descripcion": "Regiones de Chile.",
+      "columnas": [
+        {
+          "nombre": "id_region",
+          "tipo": "texto",
+          "descripcion": "Identificador de región",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre oficial de la región",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 9
+    },
+    "ciudades": {
+      "dominio": "Geografía",
+      "descripcion": "Ciudades agrupadas por región.",
+      "columnas": [
+        {
+          "nombre": "id_ciudad",
+          "tipo": "texto",
+          "descripcion": "Identificador de ciudad",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre de la ciudad",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_region",
+          "tipo": "texto",
+          "descripcion": "Región a la que pertenece",
+          "pk": false,
+          "fk": "regiones.id_region"
+        }
+      ],
+      "filas": 9
+    },
+    "comunas": {
+      "dominio": "Geografía",
+      "descripcion": "Comunas agrupadas por ciudad.",
+      "columnas": [
+        {
+          "nombre": "id_comuna",
+          "tipo": "texto",
+          "descripcion": "Identificador de comuna",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre de la comuna",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_ciudad",
+          "tipo": "texto",
+          "descripcion": "Ciudad a la que pertenece",
+          "pk": false,
+          "fk": "ciudades.id_ciudad"
+        }
+      ],
+      "filas": 15
+    },
+    "estados_cuenta": {
+      "dominio": "Cartera financiera",
+      "descripcion": "Catálogo de estados de cuenta.",
+      "columnas": [
+        {
+          "nombre": "id_estado",
+          "tipo": "texto",
+          "descripcion": "Identificador de estado",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Activo / En Revisión / Inactivo",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 3
+    },
+    "productos_financieros": {
+      "dominio": "Cartera financiera",
+      "descripcion": "Productos financieros contratados.",
+      "columnas": [
+        {
+          "nombre": "id_producto_financiero",
+          "tipo": "texto",
+          "descripcion": "Identificador del producto",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre del producto",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 5
+    },
+    "cartera_clientes": {
+      "dominio": "Cartera financiera",
+      "descripcion": "Clientes de la cartera (hojas Dataset_limpio A1/A2).",
+      "columnas": [
+        {
+          "nombre": "id_cliente",
+          "tipo": "texto",
+          "descripcion": "Identificador del cliente (CLI-0000)",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "rut",
+          "tipo": "texto",
+          "descripcion": "RUT normalizado 12.345.678-9",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "rut_dv_valido",
+          "tipo": "booleano",
+          "descripcion": "Dígito verificador correcto según módulo 11",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre completo en formato nombre propio",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "email",
+          "tipo": "texto",
+          "descripcion": "Email en minúsculas y sin tildes",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "email_valido",
+          "tipo": "booleano",
+          "descripcion": "Cumple formato de email",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_comuna",
+          "tipo": "texto",
+          "descripcion": "Comuna de residencia",
+          "pk": false,
+          "fk": "comunas.id_comuna"
+        },
+        {
+          "nombre": "fecha_registro",
+          "tipo": "fecha",
+          "descripcion": "Fecha de registro (AAAA-MM-DD)",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 957
+    },
+    "cuentas": {
+      "dominio": "Cartera financiera",
+      "descripcion": "Situación financiera de cada cliente.",
+      "columnas": [
+        {
+          "nombre": "id_cuenta",
+          "tipo": "texto",
+          "descripcion": "Identificador de cuenta",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "id_cliente",
+          "tipo": "texto",
+          "descripcion": "Titular de la cuenta",
+          "pk": false,
+          "fk": "cartera_clientes.id_cliente"
+        },
+        {
+          "nombre": "id_producto_financiero",
+          "tipo": "texto",
+          "descripcion": "Producto contratado",
+          "pk": false,
+          "fk": "productos_financieros.id_producto_financiero"
+        },
+        {
+          "nombre": "id_estado",
+          "tipo": "texto",
+          "descripcion": "Estado de la cuenta",
+          "pk": false,
+          "fk": "estados_cuenta.id_estado"
+        },
+        {
+          "nombre": "monto_facturado_clp",
+          "tipo": "entero",
+          "descripcion": "Monto facturado en pesos chilenos",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "dias_morosidad",
+          "tipo": "entero",
+          "descripcion": "Días de morosidad",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "nivel_riesgo",
+          "tipo": "texto",
+          "descripcion": "Derivado: Alto (>60 días y Activo), Medio (>30 días o En Revisión), Bajo",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 957
+    },
+    "segmentos": {
+      "dominio": "Comercial",
+      "descripcion": "Segmentos de cliente.",
+      "columnas": [
+        {
+          "nombre": "id_segmento",
+          "tipo": "texto",
+          "descripcion": "Identificador de segmento",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "VIP / Corporativo / Pyme / Persona",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 4
+    },
+    "clientes": {
+      "dominio": "Comercial",
+      "descripcion": "Clientes del módulo de ventas (hoja 2.10 Clientes).",
+      "columnas": [
+        {
+          "nombre": "id_cliente",
+          "tipo": "texto",
+          "descripcion": "Identificador del cliente (CLI-000)",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "rut",
+          "tipo": "texto",
+          "descripcion": "RUT normalizado 12.345.678-9",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "rut_dv_valido",
+          "tipo": "booleano",
+          "descripcion": "Dígito verificador correcto según módulo 11",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre completo",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_segmento",
+          "tipo": "texto",
+          "descripcion": "Segmento comercial",
+          "pk": false,
+          "fk": "segmentos.id_segmento"
+        },
+        {
+          "nombre": "id_comuna",
+          "tipo": "texto",
+          "descripcion": "Comuna del cliente",
+          "pk": false,
+          "fk": "comunas.id_comuna"
+        }
+      ],
+      "filas": 100
+    },
+    "categorias": {
+      "dominio": "Comercial",
+      "descripcion": "Categorías de producto.",
+      "columnas": [
+        {
+          "nombre": "id_categoria",
+          "tipo": "texto",
+          "descripcion": "Identificador de categoría",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre de la categoría",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 5
+    },
+    "productos": {
+      "dominio": "Comercial",
+      "descripcion": "Catálogo de productos y servicios.",
+      "columnas": [
+        {
+          "nombre": "id_producto",
+          "tipo": "texto",
+          "descripcion": "Identificador del producto",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre del producto",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_categoria",
+          "tipo": "texto",
+          "descripcion": "Categoría",
+          "pk": false,
+          "fk": "categorias.id_categoria"
+        },
+        {
+          "nombre": "precio_unitario_clp",
+          "tipo": "entero",
+          "descripcion": "Precio de lista en CLP",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 25
+    },
+    "zonas_comerciales": {
+      "dominio": "Comercial",
+      "descripcion": "Zonas comerciales de las sucursales.",
+      "columnas": [
+        {
+          "nombre": "id_zona",
+          "tipo": "texto",
+          "descripcion": "Identificador de zona",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre de la zona",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 9
+    },
+    "sucursales": {
+      "dominio": "Comercial",
+      "descripcion": "Sucursales de venta.",
+      "columnas": [
+        {
+          "nombre": "id_sucursal",
+          "tipo": "texto",
+          "descripcion": "Identificador de sucursal",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "descripcion": "Nombre de la sucursal",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_comuna",
+          "tipo": "texto",
+          "descripcion": "Comuna de la sucursal",
+          "pk": false,
+          "fk": "comunas.id_comuna"
+        },
+        {
+          "nombre": "id_zona",
+          "tipo": "texto",
+          "descripcion": "Zona comercial",
+          "pk": false,
+          "fk": "zonas_comerciales.id_zona"
+        }
+      ],
+      "filas": 15
+    },
+    "ventas": {
+      "dominio": "Comercial",
+      "descripcion": "Transacciones de venta válidas (tabla de hechos).",
+      "columnas": [
+        {
+          "nombre": "id_transaccion",
+          "tipo": "texto",
+          "descripcion": "Identificador de la transacción",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "fecha_venta",
+          "tipo": "fecha",
+          "descripcion": "Fecha de la venta (AAAA-MM-DD)",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_cliente",
+          "tipo": "texto",
+          "descripcion": "Cliente comprador",
+          "pk": false,
+          "fk": "clientes.id_cliente"
+        },
+        {
+          "nombre": "id_producto",
+          "tipo": "texto",
+          "descripcion": "Producto vendido",
+          "pk": false,
+          "fk": "productos.id_producto"
+        },
+        {
+          "nombre": "id_sucursal",
+          "tipo": "texto",
+          "descripcion": "Sucursal de la venta",
+          "pk": false,
+          "fk": "sucursales.id_sucursal"
+        },
+        {
+          "nombre": "cantidad",
+          "tipo": "entero",
+          "descripcion": "Unidades vendidas",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "precio_unitario_clp",
+          "tipo": "entero",
+          "descripcion": "Precio unitario al momento de la venta",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "monto_total_clp",
+          "tipo": "entero",
+          "descripcion": "cantidad x precio_unitario_clp",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 296
+    },
+    "ventas_rechazadas": {
+      "dominio": "Control de calidad",
+      "descripcion": "Ventas con claves foráneas inexistentes (cuarentena).",
+      "columnas": [
+        {
+          "nombre": "id_transaccion",
+          "tipo": "texto",
+          "descripcion": "Identificador de la transacción",
+          "pk": true,
+          "fk": null
+        },
+        {
+          "nombre": "fecha_venta",
+          "tipo": "fecha",
+          "descripcion": "Fecha de la venta",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_cliente",
+          "tipo": "texto",
+          "descripcion": "Cliente informado",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_producto",
+          "tipo": "texto",
+          "descripcion": "Producto informado",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "id_sucursal",
+          "tipo": "texto",
+          "descripcion": "Sucursal informada",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "cantidad",
+          "tipo": "entero",
+          "descripcion": "Unidades",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "motivo",
+          "tipo": "texto",
+          "descripcion": "Motivo del rechazo",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 4
+    }
+  },
+  "calidad": [
+    {
+      "tabla": "cartera_clientes",
+      "columna": "rut",
+      "problema": "RUT en formatos mixtos (con y sin puntos)",
+      "filas_afectadas": 241,
+      "accion": "Formato único 12.345.678-9"
+    },
+    {
+      "tabla": "cartera_clientes",
+      "columna": "rut",
+      "problema": "Dígito verificador no coincide con el cálculo módulo 11",
+      "filas_afectadas": 867,
+      "accion": "Se conserva y se marca rut_dv_valido = False"
+    },
+    {
+      "tabla": "cartera_clientes",
+      "columna": "nombre",
+      "problema": "Nombres en MAYÚSCULAS / minúsculas / espacios",
+      "filas_afectadas": 405,
+      "accion": "Nombre propio y TRIM"
+    },
+    {
+      "tabla": "cartera_clientes",
+      "columna": "email",
+      "problema": "Emails con tildes o ñ (no válidos en la parte local)",
+      "filas_afectadas": 371,
+      "accion": "Se eliminan tildes y ñ -> n"
+    },
+    {
+      "tabla": "cartera_clientes",
+      "columna": "estado_cuenta",
+      "problema": "Estados con mayúsculas inconsistentes (activo, EN REVISIÓN)",
+      "filas_afectadas": 376,
+      "accion": "Catálogo de 3 estados"
+    },
+    {
+      "tabla": "cartera_clientes",
+      "columna": "producto_financiero",
+      "problema": "Cliente presente en A1 pero ausente en A2 (sin producto)",
+      "filas_afectadas": 1,
+      "accion": "Se deja la FK vacía"
+    },
+    {
+      "tabla": "clientes",
+      "columna": "rut",
+      "problema": "Dígito verificador no coincide con el cálculo módulo 11",
+      "filas_afectadas": 94,
+      "accion": "Se conserva y se marca rut_dv_valido = False"
+    },
+    {
+      "tabla": "ventas",
+      "columna": "id_cliente",
+      "problema": "Clave foránea sin registro en clientes (CLI-999)",
+      "filas_afectadas": 2,
+      "accion": "Fila movida a ventas_rechazadas"
+    },
+    {
+      "tabla": "ventas",
+      "columna": "id_producto",
+      "problema": "Clave foránea sin registro en productos (PROD-999)",
+      "filas_afectadas": 2,
+      "accion": "Fila movida a ventas_rechazadas"
+    },
+    {
+      "tabla": "clientes",
+      "columna": "id_cliente",
+      "problema": "Clientes sin ventas registradas",
+      "filas_afectadas": 4,
+      "accion": "Informativo, se conservan"
+    }
+  ]
+}
