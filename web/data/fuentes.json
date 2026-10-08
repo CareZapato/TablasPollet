@@ -27,6 +27,7 @@
     "descripcion": "Base tablaspollet en localhost con los datos originales, procesada en vivo por la API.",
     "tipo": "api",
     "ruta": "fuentes/bd",
+    "esquema": "lavadero",
     "exportaciones": {
       "csv": "export/lavadero_bd_csv.zip",
       "excel": "export/lavadero_bd.xlsx",

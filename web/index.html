@@ -56,7 +56,7 @@
               <h2 id="tabla-titulo"></h2>
               <p id="tabla-desc" class="muted"></p>
             </div>
-            <div class="acciones">
+            <div id="acciones-tabla" class="acciones">
               <input id="buscar" type="search" placeholder="Buscar en la tabla…">
               <a id="descargar" class="boton" download>Descargar CSV</a>
             </div>
@@ -81,7 +81,7 @@
             <h2>Diagrama entidad-relación</h2>
             <p class="muted">Modelo normalizado (3FN) agrupado por área. Pasa el mouse sobre una tabla para resaltar sus relaciones; haz clic para abrirla.</p>
           </div>
-          <div class="acciones">
+          <div id="acciones-modelo" class="acciones">
             <select id="dominio-er" aria-label="Área a resaltar"></select>
             <label class="interruptor"><input id="er-completo" type="checkbox"> Todas las columnas</label>
           </div>
@@ -104,6 +104,7 @@
             <h2>Hallazgos y correcciones</h2>
             <p class="muted">Problemas detectados por el proceso ETL en el Excel original y la acción aplicada.</p>
           </div>
+          <div id="acciones-calidad" class="acciones"></div>
         </div>
         <div class="tabla-wrap"><table id="tabla-calidad"></table></div>
       </div>
@@ -324,6 +325,7 @@
     </section>
   </main>
 
+  <div id="aviso-copia" class="aviso-copia" role="status" hidden></div>
   <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -292,6 +292,29 @@ kbd {
   border: 1px dashed #b9c6e4; background: #fbfcff; border-radius: 10px; padding: 12px 14px; margin: 14px 0;
 }
 .resultado-titulo { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+.resultado-titulo:has(.btn-sql) { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+/* Botones "Copiar SQL" (fuente PostgreSQL) */
+.btn-sql {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  border: 1px solid #c5d3e3; background: #f2f6fb; color: #336791; border-radius: 6px;
+  padding: 3px 8px; font: 700 11px/1.2 inherit; letter-spacing: .03em; text-transform: none; cursor: pointer;
+}
+.btn-sql:hover { background: #336791; border-color: #336791; color: #fff; }
+.btn-sql.copiado { background: #1a9e5c; border-color: #1a9e5c; color: #fff; }
+.btn-sql.copiado::after { content: " ✓"; }
+.acciones .btn-sql, .panel-header > .btn-sql { padding: 7px 12px; font-size: 12px; align-self: center; }
+.kpi { position: relative; }
+.kpi > .btn-sql { position: absolute; top: 10px; right: 10px; }
+.kpi:has(> .btn-sql) > .muted:first-of-type { padding-right: 56px; }
+.tarjeta .cab:has(.btn-sql) { justify-content: flex-start; }
+.tarjeta .cab:has(.btn-sql) h3 { margin-right: auto; }
+.aviso-copia {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50;
+  background: #1f2a3d; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .2);
+}
+.aviso-copia[hidden] { display: none; }
 .resultado .kpis { margin-bottom: 0; }
 .tabla-guia tr.subtotal td { font-weight: 600; background: #f6f8fc; }
 .tabla-guia tr.total td { font-weight: 700; border-top: 2px solid var(--text); }

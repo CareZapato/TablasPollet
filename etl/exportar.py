@@ -131,9 +131,14 @@ def _literal(valor) -> str:
 
 
 def exportar_sql(destino: Path, tablas: dict[str, pd.DataFrame], modelo: dict, esquema: str, titulo: str) -> None:
+    destino.write_text(sql_postgres(tablas, modelo, esquema, titulo, destino.name), encoding="utf-8")
+
+
+def sql_postgres(tablas: dict[str, pd.DataFrame], modelo: dict, esquema: str, titulo: str,
+                 archivo: str = "script.sql") -> str:
     out = io.StringIO()
     out.write(f"-- {titulo}\n-- Script para PostgreSQL: esquema, tablas, claves y datos.\n")
-    out.write(f"-- Uso: psql -d <base_de_datos> -f {destino.name}\n\n")
+    out.write(f"-- Uso: psql -d <base_de_datos> -f {archivo}\n\n")
     out.write("SET client_encoding = 'UTF8';\n\nBEGIN;\n\n")
     out.write(f"DROP SCHEMA IF EXISTS {esquema} CASCADE;\nCREATE SCHEMA {esquema};\nSET search_path TO {esquema};\n\n")
 
@@ -169,7 +174,7 @@ def exportar_sql(destino: Path, tablas: dict[str, pd.DataFrame], modelo: dict, e
         out.write("\n")
 
     out.write("COMMIT;\n")
-    destino.write_text(out.getvalue(), encoding="utf-8")
+    return out.getvalue()
 
 
 def exportar_todo(carpeta: Path, id_fuente: str, nombre_fuente: str, tablas: dict[str, pd.DataFrame],

@@ -3,7 +3,7 @@
   "nombre": "CSV originales",
   "descripcion": "Archivos originales antes de cualquier limpieza (carpeta dataoriginal).",
   "fuente": "dataoriginal/*.csv",
-  "generado": "2026-10-08T01:39:40",
+  "generado": "2026-10-08T01:54:47",
   "tablas": {
     "regiones": {
       "dominio": "Geografía",

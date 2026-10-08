@@ -61,6 +61,13 @@ Endpoints:
 | `GET /api/fuentes/bd/{tabla}.csv` | Tabla procesada |
 | `GET /api/fuentes/bd/export/{archivo}` | Descargas CSV (.zip), Excel (.xlsx) y SQL |
 
+Cada vez que la API lee la base, publica el resultado del ETL en el esquema `lavadero` de `tablaspollet`
+(tablas normalizadas con PK, FK y comentarios). Con la fuente **PostgreSQL local** activa, la web muestra botones
+**SQL** junto a los KPIs, la comparación, las tarjetas de tablas, la tabla abierta (con su filtro, búsqueda y
+orden), el modelo, la calidad y cada resultado de la guía: copian al portapapeles la consulta que devuelve ese
+mismo valor, lista para ejecutar en psql o pgAdmin. Las tablas `origen_*` se consultan en las tablas crudas de `public`.
+Las consultas están en `web/consultas.js`.
+
 La web consulta `/api/estado` cada 10 segundos. Si la API o la base no responden, la opción
 **PostgreSQL local** aparece *offline* y no se puede seleccionar; si la conexión se pierde mientras está
 activa, la web vuelve a los CSV originales. Con la base en línea, el botón **Recargar** vuelve a leer las tablas.

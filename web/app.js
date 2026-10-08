@@ -1,3 +1,5 @@
+import { SQL } from "./consultas.js";
+
 const DATA_DIR = "data";
 const POR_PAGINA = 25;
 const COLOR_DOMINIO = {
@@ -146,6 +148,51 @@ async function seleccionarFuente(id) {
   }
 }
 
+// ------------------------------------------------------------------ Copiar consultas SQL (solo fuente PostgreSQL)
+
+const consultas = new Map();
+const enBD = () => estado.fuente === "bd";
+const esquemaBD = () => fuentes.bd?.esquema ?? api.estado?.esquema ?? "lavadero";
+
+function botonSQL(clave, sql) {
+  if (!enBD()) return "";
+  consultas.set(clave, sql);
+  return `<button type="button" class="btn-sql" data-sql="${clave}" title="Copiar la consulta SQL para PostgreSQL">
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 11V3.5A1.5 1.5 0 0 1 4.5 2H11" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>SQL</button>`;
+}
+
+function anclarSQL(contenedor, clave, sql) {
+  if (!contenedor) return;
+  contenedor.querySelector(":scope > .btn-sql")?.remove();
+  contenedor.insertAdjacentHTML("beforeend", botonSQL(clave, sql));
+}
+
+let plazoAviso;
+function avisar(texto) {
+  const el = $("#aviso-copia");
+  el.textContent = texto;
+  el.hidden = false;
+  clearTimeout(plazoAviso);
+  plazoAviso = setTimeout(() => { el.hidden = true; }, 2200);
+}
+
+async function copiarSQL(boton) {
+  const sql = consultas.get(boton.dataset.sql);
+  if (!sql) return;
+  try {
+    await navigator.clipboard.writeText(sql);
+  } catch {
+    const area = Object.assign(document.createElement("textarea"), { value: sql });
+    document.body.append(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+  boton.classList.add("copiado");
+  setTimeout(() => boton.classList.remove("copiado"), 1200);
+  avisar(`Consulta copiada · ejecútala en la base ${api.estado?.base ?? "tablaspollet"} (psql o pgAdmin)`);
+}
+
 function renderSelector() {
   const cont = $("#selector-fuente");
   cont.innerHTML = catalogo.map((f) => {
@@ -185,27 +232,28 @@ function renderResumen() {
   const totalFacturado = d.cuentas.reduce((s, r) => s + Number(r.monto_facturado_clp || 0), 0);
   const totalVentas = d.ventas.reduce((s, r) => s + Number(r.monto_total_clp || 0), 0);
   const riesgoAlto = d.cuentas.filter((r) => r.nivel_riesgo === "Riesgo Alto").length;
+  const e = esquemaBD();
   const kpis = [
-    ["Clientes cartera financiera", fmtNum.format(d.cartera_clientes.length)],
-    ["Monto facturado cartera", fmtCLP.format(totalFacturado)],
-    ["Cuentas en riesgo alto", fmtNum.format(riesgoAlto)],
-    ["Clientes comerciales", fmtNum.format(d.clientes.length)],
-    ["Ventas válidas", `${fmtNum.format(d.ventas.length)} · ${fmtCLP.format(totalVentas)}`],
-    ["Ventas rechazadas", fmtNum.format(d.ventas_rechazadas.length)],
+    ["Clientes cartera financiera", fmtNum.format(d.cartera_clientes.length), SQL.kpiClientes],
+    ["Monto facturado cartera", fmtCLP.format(totalFacturado), SQL.kpiFacturado],
+    ["Cuentas en riesgo alto", fmtNum.format(riesgoAlto), SQL.kpiRiesgoAlto],
+    ["Clientes comerciales", fmtNum.format(d.clientes.length), SQL.kpiClientesComerciales],
+    ["Ventas válidas", `${fmtNum.format(d.ventas.length)} · ${fmtCLP.format(totalVentas)}`, SQL.kpiVentas],
+    ["Ventas rechazadas", fmtNum.format(d.ventas_rechazadas.length), SQL.kpiRechazadas],
   ];
-  $("#kpis").innerHTML = kpis.map(([t, v]) =>
-    `<div class="kpi"><div class="muted">${t}</div><div class="valor">${v}</div></div>`).join("");
+  $("#kpis").innerHTML = kpis.map(([t, v, sql], i) =>
+    `<div class="kpi">${botonSQL(`kpi-${i}`, sql(e))}<div class="muted">${t}</div><div class="valor">${v}</div></div>`).join("");
 
   renderComparacion();
 
   $("#tarjetas").innerHTML = Object.entries(estado.modelo.tablas).filter(([, m]) => !m.origen).map(([nombre, m]) => `
     <div class="tarjeta clickable" data-tabla="${nombre}" style="--dom:${COLOR_DOMINIO[m.dominio]}">
-      <div class="cab"><h3>${nombre}</h3><span class="dominio-tag">${m.dominio}</span></div>
+      <div class="cab"><h3>${nombre}</h3><span class="dominio-tag">${m.dominio}</span>${botonSQL(`tarjeta-${nombre}`, SQL.tablaCompleta(e, nombre))}</div>
       <p class="muted">${m.descripcion}</p>
       <p><b>${fmtNum.format(m.filas)}</b> filas · ${m.columnas.length} columnas</p>
     </div>`).join("");
   document.querySelectorAll("#tarjetas .tarjeta").forEach((el) =>
-    el.addEventListener("click", () => abrirTabla(el.dataset.tabla)));
+    el.addEventListener("click", (ev) => { if (!ev.target.closest(".btn-sql")) abrirTabla(el.dataset.tabla); }));
 }
 
 function metricas(f) {
@@ -266,7 +314,8 @@ function renderComparacion() {
   $("#comparacion").hidden = false;
   $("#comparacion").innerHTML = `
     <div class="panel-header"><div><h2>Comparación entre fuentes</h2>
-      <p class="muted">Mismo proceso ETL aplicado a cada fuente. Columna activa resaltada.</p></div></div>
+      <p class="muted">Mismo proceso ETL aplicado a cada fuente. Columna activa resaltada.</p></div>
+      ${botonSQL("comparacion", SQL.comparacion(esquemaBD()))}</div>
     <div class="tabla-wrap"><table class="tabla-guia tabla-comparacion">
       <thead><tr><th>Indicador</th>${ids.map((id) => `<th class="${id === estado.fuente ? "activa" : ""}">${fuentes[id].nombre}</th>`).join("")}
         <th>Diferencia (${fuentes[b].nombre} − ${fuentes[a].nombre})</th></tr></thead>
@@ -356,6 +405,7 @@ function renderTabla() {
   $("#tabla-desc").textContent = `${m.dominio} · ${m.descripcion}`;
   $("#descargar").href = `${fuentes[estado.fuente].dir}/${estado.tabla}.csv`;
   $("#descargar").download = `${estado.fuente}_${estado.tabla}.csv`;
+  anclarSQL($("#acciones-tabla"), "tabla", SQL.tablaVista(esquemaBD(), estado.tabla, estado));
 
   const filtro = $("#filtro-activo");
   filtro.hidden = !estado.filtro;
@@ -572,10 +622,11 @@ function renderModelo() {
   $("#dominio-er").onchange = renderDiagrama;
   $("#er-completo").onchange = renderDiagrama;
   renderDiagrama();
+  anclarSQL($("#acciones-modelo"), "relaciones", SQL.relaciones(esquemaBD()));
 
   $("#diccionario").innerHTML = Object.entries(estado.modelo.tablas).filter(([, m]) => !m.origen).map(([nombre, m]) => `
     <div class="tarjeta" style="--dom:${COLOR_DOMINIO[m.dominio]}">
-      <div class="cab"><h3>${nombre}</h3><span class="dominio-tag">${m.dominio}</span></div>
+      <div class="cab"><h3>${nombre}</h3><span class="dominio-tag">${m.dominio}</span>${botonSQL(`dic-${nombre}`, SQL.diccionario(esquemaBD(), nombre))}</div>
       <p class="muted">${m.descripcion}</p>
       <ul>${m.columnas.map((c) => `
         <li title="${c.descripcion}">
@@ -590,6 +641,7 @@ function renderModelo() {
 
 function renderCalidad() {
   const filas = estado.modelo.calidad;
+  anclarSQL($("#acciones-calidad"), "calidad", SQL.calidad(esquemaBD()));
   $("#tabla-calidad").innerHTML = `
     <thead><tr><th>Tabla</th><th>Columna</th><th>Problema detectado</th><th>Filas afectadas</th><th>Acción</th></tr></thead>
     <tbody>${filas.map((q) => `<tr>
@@ -650,6 +702,8 @@ function tablaHTML(cabeceras, filas, total) {
     ${total ? tr(total, "total") : ""}</tbody></table></div>`;
 }
 
+const tituloResultado = (sel) => $(sel)?.closest(".resultado")?.querySelector(".resultado-titulo");
+
 function renderGuiaFiltrada() {
   const filas = guia.estados.size ? guia.base.filter((f) => guia.estados.has(f.estado)) : guia.base;
 
@@ -669,13 +723,20 @@ function renderGuiaFiltrada() {
     ["Región / Comuna", "Suma de Monto_Facturado_CLP", "Cuenta de ID_Cliente"],
     filasRegion, ["Total general", fmtCLP.format(suma(filas)), fmtNum.format(filas.length)]);
 
+  const e = esquemaBD();
+  const estadosSel = [...guia.estados];
+  anclarSQL(tituloResultado("#g-pivot1"), "guia-producto", SQL.guiaProducto(e, estadosSel));
+  anclarSQL(tituloResultado("#g-pivot2"), "guia-region", SQL.guiaRegionComuna(e, estadosSel));
+  anclarSQL(tituloResultado("#g-chart"), "guia-regiones", SQL.guiaRegiones(e, estadosSel));
+
   const total = suma(filas);
   const criticos = filas.filter((f) => f.dias > 60).length;
   $("#g-kpis").innerHTML = [
-    ["Ingresos totales facturados", fmtCLP.format(total), `${fmtNum.format(filas.length)} clientes`],
-    ["Ticket promedio por cliente", fmtCLP.format(filas.length ? total / filas.length : 0), "Ingresos ÷ N° clientes"],
-    ["Tasa de morosidad crítica", fmtPct.format(filas.length ? criticos / filas.length : 0), `${fmtNum.format(criticos)} clientes con más de 60 días`],
-  ].map(([t, v, s]) => `<div class="kpi"><div class="muted">${t}</div><div class="valor">${v}</div><div class="muted">${s}</div></div>`).join("");
+    ["Ingresos totales facturados", fmtCLP.format(total), `${fmtNum.format(filas.length)} clientes`, SQL.guiaIngresos],
+    ["Ticket promedio por cliente", fmtCLP.format(filas.length ? total / filas.length : 0), "Ingresos ÷ N° clientes", SQL.guiaTicket],
+    ["Tasa de morosidad crítica", fmtPct.format(filas.length ? criticos / filas.length : 0), `${fmtNum.format(criticos)} clientes con más de 60 días`, SQL.guiaTasaCritica],
+  ].map(([t, v, s, sql], i) => `<div class="kpi">${botonSQL(`guia-kpi-${i}`, sql(e, estadosSel))}<div class="muted">${t}</div>
+    <div class="valor">${v}</div><div class="muted">${s}</div></div>`).join("");
 
   const barras = porRegion.map(([r, fs]) => [r.replace(/^Región (del |de la |de )?/, ""), suma(fs)]).sort((a, b) => b[1] - a[1]);
   const max = Math.max(1, ...barras.map((b) => b[1]));
@@ -716,6 +777,8 @@ function renderGuia() {
         `${fmtCLP.format(0)} ⚠`, `${fmtCLP.format(0)} · producto inexistente`],
     })),
   ];
+  anclarSQL(tituloResultado("#g-cruce"), "guia-cruce", SQL.guiaCruce(esquemaBD()));
+  anclarSQL(tituloResultado("#g-zonas"), "guia-zonas", SQL.guiaZonas(esquemaBD()));
   $("#g-cruce").innerHTML = tablaHTML(
     ["ID_Transaccion", "ID_Sucursal", "Zona_Comercial", "ID_Producto", "Cantidad", "Precio_Unitario_CLP", "Total_Facturado_CLP"], ejemplos);
 
@@ -808,6 +871,10 @@ async function iniciar() {
     return;
   }
   setInterval(vigilarBD, INTERVALO_ESTADO);
+  document.addEventListener("click", (ev) => {
+    const boton = ev.target.closest(".btn-sql");
+    if (boton) { ev.stopPropagation(); copiarSQL(boton); }
+  }, true);
 
   $("#btn-exportar").addEventListener("click", (ev) => { ev.stopPropagation(); alternarMenuExportar(); });
   $("#menu-exportar").addEventListener("click", (ev) => { if (ev.target.closest("a")) alternarMenuExportar(false); });

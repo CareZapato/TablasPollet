@@ -7,7 +7,8 @@ de modo que la web puede alternar entre Excel trabajado, CSV originales y la bas
 
 Endpoints:
     GET /api/estado                          Estado de la conexión y filas por tabla de la base.
-    GET /api/fuentes/bd/modelo.json          Reprocesa la base y devuelve el modelo y la calidad.
+    GET /api/fuentes/bd/modelo.json          Reprocesa la base, publica el resultado en el esquema "lavadero"
+                                             y devuelve el modelo y la calidad.
     GET /api/fuentes/bd/{tabla}.csv          Tabla procesada (del último reproceso).
     GET /api/fuentes/bd/export/{archivo}     Descargas CSV (.zip), Excel (.xlsx) y PostgreSQL (.sql).
     GET /                                    Sitio web (carpeta web/).
@@ -38,8 +39,10 @@ sys.path[:0] = [str(RAIZ / "etl"), str(RAIZ / "bd")]
 
 import procesar_excel as etl  # noqa: E402
 from crear_bd import BASE, CONEXION, TABLAS_BD  # noqa: E402
+from exportar import sql_postgres  # noqa: E402
 
 CACHE = RAIZ / "api" / ".cache" / "bd"
+ESQUEMA = etl.FUENTE_BD["esquema"]
 URL_BD = f"postgresql://{CONEXION['user']}@{CONEXION['host']}:{CONEXION['port']}/{BASE}"
 bloqueo = threading.Lock()
 
@@ -81,7 +84,15 @@ def reprocesar(descargas: bool = False) -> None:
     with bloqueo:
         shutil.rmtree(CACHE, ignore_errors=True)
         f = etl.FUENTE_BD
-        etl.exportar(f["id"], f["nombre"], f["descripcion"], URL_BD, cargar, carpeta=CACHE, descargas=descargas)
+        etl.exportar(f["id"], f["nombre"], f["descripcion"], URL_BD, cargar, carpeta=CACHE, descargas=descargas,
+                     al_procesar=publicar)
+
+
+def publicar(tablas: dict[str, pd.DataFrame], modelo: dict) -> None:
+    """Deja el resultado del ETL en el esquema "lavadero" para consultarlo con SQL (las consultas que copia la web)."""
+    sql = sql_postgres(tablas, modelo, ESQUEMA, f"Lavadero de datos · {etl.FUENTE_BD['nombre']}")
+    with conectar() as conn:
+        conn.execute(sql)
 
 
 def error_bd(e: Exception) -> HTTPException:
@@ -90,7 +101,7 @@ def error_bd(e: Exception) -> HTTPException:
 
 @app.get("/api/estado")
 def estado():
-    respuesta = {"ok": True, "base": BASE, "host": CONEXION["host"], "puerto": CONEXION["port"],
+    respuesta = {"ok": True, "base": BASE, "esquema": ESQUEMA, "host": CONEXION["host"], "puerto": CONEXION["port"],
                  "usuario": CONEXION["user"], "conectado": False, "tablas": {}, "error": None}
     try:
         with conectar() as conn:
