@@ -24,7 +24,7 @@
 .fuente-etiqueta { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .selector-fuente { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
 .selector-fuente button {
-  display: flex; align-items: center; gap: 8px; width: 205px; text-align: left;
+  display: flex; align-items: center; gap: 8px; width: 190px; text-align: left;
   border: 1px solid transparent; background: transparent; padding: 6px 10px; border-radius: 7px;
   font: inherit; cursor: pointer; color: var(--muted);
 }
@@ -34,6 +34,22 @@
 .selector-fuente button small { display: block; font-size: 11px; color: var(--muted); }
 .selector-fuente button.active { background: #fff; color: var(--text); border-color: var(--c); box-shadow: 0 1px 3px rgba(20, 30, 60, .12); }
 .selector-fuente button.active .punto { opacity: 1; }
+.selector-fuente button > span:last-child { min-width: 0; }
+.selector-fuente button small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selector-fuente .punto.verde { background: #1a9e5c; opacity: 1; box-shadow: 0 0 0 3px #d5f2e3; }
+.selector-fuente .punto.rojo { background: #c4c9d4; opacity: 1; }
+.selector-fuente button.offline { cursor: not-allowed; opacity: .6; }
+.selector-fuente button.offline:hover { background: transparent; }
+.selector-fuente button.offline small { color: var(--bad); }
+.selector-fuente button.cargando .punto { animation: latido 1s ease-in-out infinite; }
+@keyframes latido { 50% { transform: scale(.55); opacity: .4; } }
+body[data-fuente="bd"] { --c-fuente: #336791; }
+.recargar {
+  border: 1px solid var(--c); background: #fff; color: var(--c); border-radius: 99px; padding: 1px 10px;
+  font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 8px;
+}
+.recargar:hover { background: var(--c); color: #fff; }
+.aviso-fuente { color: var(--bad); font-weight: 600; margin-right: 10px; }
 
 .exportar { position: relative; }
 .btn-exportar {

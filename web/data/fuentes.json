@@ -20,5 +20,17 @@
       "excel": "export/lavadero_original.xlsx",
       "sql": "export/lavadero_original_postgres.sql"
     }
+  },
+  {
+    "id": "bd",
+    "nombre": "PostgreSQL local",
+    "descripcion": "Base tablaspollet en localhost con los datos originales, procesada en vivo por la API.",
+    "tipo": "api",
+    "ruta": "fuentes/bd",
+    "exportaciones": {
+      "csv": "export/lavadero_bd_csv.zip",
+      "excel": "export/lavadero_bd.xlsx",
+      "sql": "export/lavadero_bd_postgres.sql"
+    }
   }
 ]

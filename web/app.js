@@ -10,9 +10,11 @@ const COLOR_DOMINIO = {
 const ESTILO_FUENTE = {
   excel: { color: "var(--primary)", detalle: "Después de la limpieza manual" },
   original: { color: "#e07a1f", detalle: "Sin limpiar, tal como llegaron" },
+  bd: { color: "#336791", detalle: "Base de datos local" },
 };
 
 const fuentes = {};
+let catalogo = [];
 
 const estado = {
   fuente: null,
@@ -58,20 +60,109 @@ async function leerJSON(ruta) {
   return resp.json();
 }
 
-async function cargar() {
-  const lista = await leerJSON(`${DATA_DIR}/fuentes.json`);
-  const cargadas = await Promise.all(lista.map(async (f) => {
-    const dir = `${DATA_DIR}/${f.carpeta}`;
-    const modelo = await leerJSON(`${dir}/modelo.json`);
-    const datos = {};
-    await Promise.all(Object.keys(modelo.tablas).map(async (nombre) => {
-      const r = await fetch(`${dir}/${nombre}.csv`);
-      datos[nombre] = parseCSV(await r.text());
-    }));
-    return { ...f, dir, modelo, datos };
+async function cargarFuente(f, dir) {
+  const modelo = await leerJSON(`${dir}/modelo.json`);
+  const datos = {};
+  await Promise.all(Object.keys(modelo.tablas).map(async (nombre) => {
+    const r = await fetch(`${dir}/${nombre}.csv`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`No se pudo leer ${nombre}.csv`);
+    datos[nombre] = parseCSV(await r.text());
   }));
+  return { ...f, dir, modelo, datos };
+}
+
+async function cargar() {
+  catalogo = await leerJSON(`${DATA_DIR}/fuentes.json`);
+  const estaticas = catalogo.filter((f) => f.tipo !== "api");
+  const cargadas = await Promise.all(estaticas.map((f) => cargarFuente(f, `${DATA_DIR}/${f.carpeta}`)));
   for (const f of cargadas) fuentes[f.id] = f;
-  return lista.map((f) => f.id);
+}
+
+const idsCargados = () => catalogo.map((f) => f.id).filter((id) => fuentes[id]);
+
+// ------------------------------------------------------------------ API local (PostgreSQL)
+
+const API_CANDIDATAS = [...new Set(["api", "http://localhost:8000/api"])];
+const INTERVALO_ESTADO = 10000;
+const api = { base: null, estado: null, cargando: false, aviso: "" };
+
+async function consultarEstado() {
+  const candidatas = api.base ? [api.base, ...API_CANDIDATAS.filter((c) => c !== api.base)] : API_CANDIDATAS;
+  for (const base of candidatas) {
+    try {
+      const control = new AbortController();
+      const plazo = setTimeout(() => control.abort(), 8000);
+      const r = await fetch(`${base}/estado`, { cache: "no-store", signal: control.signal });
+      clearTimeout(plazo);
+      if (!r.ok) continue;
+      const datos = await r.json();
+      if (datos?.ok) { api.base = base; api.estado = datos; return; }
+    } catch { /* se prueba la siguiente dirección */ }
+  }
+  api.base = null;
+  api.estado = null;
+}
+
+const bdConectada = () => Boolean(api.estado?.conectado);
+
+function textoEstadoBD() {
+  if (api.cargando) return "Cargando datos…";
+  if (bdConectada()) return `En línea · ${api.estado.base}@${api.estado.host}`;
+  if (api.estado) return "Offline · sin conexión a la base";
+  return "Offline · API no disponible";
+}
+
+async function vigilarBD() {
+  await consultarEstado();
+  if (!bdConectada() && fuentes.bd) {
+    delete fuentes.bd;
+    if (estado.fuente === "bd") {
+      api.aviso = "Se perdió la conexión con la base de datos. Se volvió a CSV originales.";
+      usarFuente(fuentes.original ? "original" : idsCargados()[0]);
+    } else {
+      renderComparacion();
+    }
+  }
+  renderSelector();
+}
+
+async function seleccionarFuente(id) {
+  const f = catalogo.find((x) => x.id === id);
+  if (f?.tipo !== "api") { usarFuente(id); return; }
+  if (!bdConectada() || api.cargando) return;
+  api.cargando = true;
+  api.aviso = "";
+  renderSelector();
+  try {
+    fuentes[id] = await cargarFuente(f, `${api.base}/${f.ruta}`);
+    usarFuente(id);
+  } catch (e) {
+    api.aviso = `No se pudieron leer los datos de la base: ${e.message}`;
+    await consultarEstado();
+    if (estado.fuente) usarFuente(estado.fuente);
+  } finally {
+    api.cargando = false;
+    renderSelector();
+  }
+}
+
+function renderSelector() {
+  const cont = $("#selector-fuente");
+  cont.innerHTML = catalogo.map((f) => {
+    const esApi = f.tipo === "api";
+    const offline = esApi && !bdConectada();
+    const detalle = esApi ? textoEstadoBD() : ESTILO_FUENTE[f.id]?.detalle ?? f.carpeta;
+    const ayuda = esApi
+      ? (offline ? `Sin conexión. ${api.estado?.error ?? "Inicia la API con: python api/servidor.py"}` : f.descripcion)
+      : f.descripcion;
+    const clases = [f.id === estado.fuente ? "active" : "", offline ? "offline" : "", esApi && api.cargando ? "cargando" : ""];
+    return `<button role="radio" data-fuente="${f.id}" class="${clases.join(" ")}" ${offline ? "disabled" : ""}
+        aria-checked="${f.id === estado.fuente}" title="${escapar(ayuda)}" style="--c:${ESTILO_FUENTE[f.id]?.color ?? "var(--primary)"}">
+      <span class="punto ${esApi ? (offline ? "rojo" : "verde") : ""}"></span>
+      <span><b>${f.nombre}</b><small>${escapar(detalle)}</small></span>
+    </button>`;
+  }).join("");
+  cont.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => seleccionarFuente(b.dataset.fuente)));
 }
 
 function tablasPorDominio(incluirOrigen = true) {
@@ -136,7 +227,7 @@ function metricas(f) {
 }
 
 function renderComparacion() {
-  const ids = Object.keys(fuentes);
+  const ids = idsCargados();
   if (ids.length < 2) { $("#comparacion").hidden = true; return; }
   const m = Object.fromEntries(ids.map((id) => [id, metricas(fuentes[id])]));
   const pct = new Intl.NumberFormat("es-CL", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -152,7 +243,9 @@ function renderComparacion() {
     ["Ventas rechazadas", "rechazadas", fmtNum],
     ["Valores corregidos o marcados por el ETL", "correcciones", fmtNum],
   ];
-  const [a, b] = ids;
+  // Se compara contra la primera fuente (Excel trabajado): la activa, o la siguiente si la activa es la base.
+  const a = ids[0];
+  const b = estado.fuente !== a && ids.includes(estado.fuente) ? estado.fuente : ids[1];
   const diferencia = (k, fmt) => {
     const dif = m[b][k] - m[a][k];
     if (Math.abs(dif) < 1e-9) return `<span class="muted">igual</span>`;
@@ -164,9 +257,11 @@ function renderComparacion() {
   const soloB = fuentes[b].datos.cartera_clientes.filter((r) => !idsA.has(r.id_cliente)).map((r) => r.id_cliente);
   const nota = soloB.length
     ? `<p class="nota-comparacion"><b>${fmtNum.format(soloB.length)} clientes</b> existen en <b>${fuentes[b].nombre}</b> pero no en
-        <b>${fuentes[a].nombre}</b> (${soloB[0]} … ${soloB.at(-1)}). En la fuente original ningún RUT está repetido:
+        <b>${fuentes[a].nombre}</b> (${soloB[0]} … ${soloB.at(-1)}). En los datos originales ningún RUT está repetido:
         esas filas no eran duplicados, sino las últimas del archivo, que se perdieron al filtrar "duplicados" en el Excel.</p>`
     : "";
+  const sinBD = catalogo.some((f) => f.tipo === "api") && !fuentes.bd
+    ? `<p class="muted">La fuente <b>PostgreSQL local</b> se agrega a esta comparación al seleccionarla con la base en línea.</p>` : "";
 
   $("#comparacion").hidden = false;
   $("#comparacion").innerHTML = `
@@ -178,7 +273,7 @@ function renderComparacion() {
       <tbody>${filas.map(([t, k, fmt]) => `<tr><td>${t}</td>
         ${ids.map((id) => `<td class="num ${id === estado.fuente ? "activa" : ""}">${fmt.format(m[id][k])}</td>`).join("")}
         <td class="num">${diferencia(k, fmt)}</td></tr>`).join("")}</tbody>
-    </table></div>${nota}`;
+    </table></div>${nota}${sinBD}`;
 }
 
 // ------------------------------------------------------------------ Tablas
@@ -680,14 +775,15 @@ function usarFuente(id) {
   const generado = new Date(f.modelo.generado).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
   const info = $("#fuente-info");
   info.style.setProperty("--c", ESTILO_FUENTE[id]?.color ?? "var(--primary)");
-  info.innerHTML = `<span class="etiqueta-fuente">Viendo: ${f.nombre}</span>${f.descripcion}
-    · ${fmtNum.format(f.datos.cartera_clientes.length)} clientes de cartera · generado ${generado}`;
-  info.title = `${f.descripcion}\nArchivo: ${f.modelo.fuente}\nGenerado: ${generado}`;
-  document.querySelectorAll("#selector-fuente button").forEach((b) => {
-    const activo = b.dataset.fuente === id;
-    b.classList.toggle("active", activo);
-    b.setAttribute("aria-checked", activo);
-  });
+  const esApi = f.tipo === "api";
+  info.innerHTML = (api.aviso ? `<span class="aviso-fuente">${escapar(api.aviso)}</span>` : "") +
+    (esApi ? `<button id="recargar-bd" class="recargar" title="Volver a leer las tablas de la base">↻ Recargar</button>` : "") +
+    `<span class="etiqueta-fuente">Viendo: ${f.nombre}</span>${f.descripcion}
+    · ${fmtNum.format(f.datos.cartera_clientes.length)} clientes de cartera · ${esApi ? "leído" : "generado"} ${generado}`;
+  info.title = `${f.descripcion}\nOrigen: ${f.modelo.fuente}\n${esApi ? "Leído" : "Generado"}: ${generado}`;
+  $("#recargar-bd")?.addEventListener("click", () => seleccionarFuente("bd"));
+  api.aviso = "";
+  renderSelector();
   document.querySelectorAll(".fuente-activa").forEach((el) => { el.textContent = f.nombre; });
   renderMenuExportar();
 
@@ -703,23 +799,15 @@ function usarFuente(id) {
 }
 
 async function iniciar() {
-  let ids;
   try {
-    ids = await cargar();
+    await Promise.all([cargar(), consultarEstado()]);
   } catch (e) {
     $("main").innerHTML = `<div class="error"><b>No se pudieron cargar los datos.</b><br>
-      Abre la página mediante un servidor local, por ejemplo: <code>python -m http.server 8000 -d web</code>
+      Abre la página mediante el servidor local: <code>python api/servidor.py</code>
       y luego visita <code>http://localhost:8000</code>.<br><small>${e.message}</small></div>`;
     return;
   }
-
-  $("#selector-fuente").innerHTML = ids.map((id) => `
-    <button role="radio" data-fuente="${id}" title="${fuentes[id].descripcion}" style="--c:${ESTILO_FUENTE[id]?.color ?? "var(--primary)"}">
-      <span class="punto"></span>
-      <span><b>${fuentes[id].nombre}</b><small>${ESTILO_FUENTE[id]?.detalle ?? fuentes[id].carpeta}</small></span>
-    </button>`).join("");
-  document.querySelectorAll("#selector-fuente button").forEach((b) =>
-    b.addEventListener("click", () => usarFuente(b.dataset.fuente)));
+  setInterval(vigilarBD, INTERVALO_ESTADO);
 
   $("#btn-exportar").addEventListener("click", (ev) => { ev.stopPropagation(); alternarMenuExportar(); });
   $("#menu-exportar").addEventListener("click", (ev) => { if (ev.target.closest("a")) alternarMenuExportar(false); });
@@ -736,7 +824,9 @@ async function iniciar() {
   }));
 
   const pedida = new URLSearchParams(location.search).get("fuente") ?? localStorage.getItem("fuente");
-  usarFuente(fuentes[pedida] ? pedida : ids[0]);  const inicial = location.hash.slice(1);
+  usarFuente(fuentes[pedida] ? pedida : idsCargados()[0]);
+  if (pedida === "bd" && bdConectada()) await seleccionarFuente("bd");
+  const inicial = location.hash.slice(1);
   if (document.getElementById(`vista-${inicial}`)) mostrarVista(inicial);
 }
 

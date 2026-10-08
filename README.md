@@ -4,15 +4,18 @@ Proceso ETL que toma el Excel `Actividad 1 - Lavadero de datos.xlsx`, limpia y n
 (clientes, cartera financiera, productos, sucursales y ventas) y las exporta a CSV relacionados.
 Una web estática muestra las tablas, el modelo entidad-relación y el reporte de calidad de datos.
 
-El mismo proceso se aplica a dos fuentes, y la web permite alternar entre ellas y compararlas:
+El mismo proceso se aplica a tres fuentes, y la web permite alternar entre ellas y compararlas:
 
 - **Excel trabajado**: hojas del Excel después de la limpieza manual.
 - **CSV originales**: archivos de `web/data/dataoriginal`, antes de cualquier limpieza.
+- **PostgreSQL local**: base `tablaspollet` con los mismos datos originales, leída y procesada en vivo por la API.
 
 ## Estructura
 
 ```
-etl/procesar_excel.py    Proceso ETL para ambas fuentes -> CSV + modelo.json
+etl/procesar_excel.py    Proceso ETL para todas las fuentes -> CSV + modelo.json
+bd/crear_bd.py           Crea la base tablaspollet y carga las tablas originales (sin limpiar)
+api/servidor.py          API FastAPI: conecta con PostgreSQL, aplica el ETL y sirve la web
 web/                     Sitio estático (index.html, app.js, styles.css)
 web/data/dataoriginal/   CSV originales sin limpiar (entrada)
 web/data/excel/          Resultado del ETL sobre el Excel
@@ -39,16 +42,42 @@ El botón **Exportar datos** de la web descarga todas las tablas de la fuente ac
 - **PostgreSQL (.sql)**: crea el esquema `lavadero_<fuente>` con tablas, PK, FK, comentarios e inserts.
   Cargar con `psql -d <base> -f lavadero_<fuente>_postgres.sql`.
 
+## Base de datos PostgreSQL local
+
+Conexión por defecto: `localhost:5432`, base `tablaspollet`, usuario `postgres`, clave `123456`
+(se puede cambiar con `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` y `PGDATABASE`).
+
+```bash
+python bd/crear_bd.py      # crea la base y carga las 6 tablas originales (también deja bd/tablaspollet_original.sql)
+python api/servidor.py     # API + web en http://localhost:8000
+```
+
+Endpoints:
+
+| Método y ruta | Descripción |
+|---|---|
+| `GET /api/estado` | Estado de la conexión y filas por tabla |
+| `GET /api/fuentes/bd/modelo.json` | Lee la base, aplica el ETL y devuelve modelo y calidad |
+| `GET /api/fuentes/bd/{tabla}.csv` | Tabla procesada |
+| `GET /api/fuentes/bd/export/{archivo}` | Descargas CSV (.zip), Excel (.xlsx) y SQL |
+
+La web consulta `/api/estado` cada 10 segundos. Si la API o la base no responden, la opción
+**PostgreSQL local** aparece *offline* y no se puede seleccionar; si la conexión se pierde mientras está
+activa, la web vuelve a los CSV originales. Con la base en línea, el botón **Recargar** vuelve a leer las tablas.
+
 ## Ver la web en local
 
 ```bash
-python -m http.server 8000 -d web
+python api/servidor.py
 ```
 
-Abrir `http://localhost:8000`.
+Abrir `http://localhost:8000`. Sin la API también funciona con `python -m http.server 8000 -d web`,
+pero la fuente PostgreSQL aparecerá offline.
 
 ## Despliegue en Render
 
 Render detecta `render.yaml` (New > Blueprint) y publica la carpeta `web` como sitio estático.
 Si se crea manualmente como *Static Site*: Build Command vacío y Publish Directory `web`.
 Al cambiar el Excel, ejecutar el ETL en local y subir los CSV actualizados.
+En el sitio publicado, la fuente PostgreSQL solo aparece en línea si en el mismo equipo está corriendo
+`python api/servidor.py` (la web prueba `http://localhost:8000/api`).

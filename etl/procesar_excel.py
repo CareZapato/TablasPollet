@@ -555,11 +555,12 @@ def procesar(fuente: dict[str, pd.DataFrame]) -> tuple[dict[str, pd.DataFrame], 
 
 
 def exportar(id_fuente: str, nombre: str, descripcion: str, archivo: str,
-             cargar: Callable[[], dict[str, pd.DataFrame]]) -> dict:
+             cargar: Callable[[], dict[str, pd.DataFrame]], carpeta: Path | None = None,
+             descargas: bool = True) -> dict:
     calidad.clear()
     fuente = cargar()
     tablas, modelo = procesar(fuente)
-    carpeta = SALIDA / id_fuente
+    carpeta = carpeta or SALIDA / id_fuente
     carpeta.mkdir(parents=True, exist_ok=True)
     print(f"[{id_fuente}] {nombre}")
     for tabla, df in tablas.items():
@@ -574,10 +575,21 @@ def exportar(id_fuente: str, nombre: str, descripcion: str, archivo: str,
     }
     (carpeta / "modelo.json").write_text(json.dumps(metadatos, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"  modelo.json  ({len(metadatos['calidad'])} hallazgos de calidad)")
-    exportaciones = exportar_todo(carpeta, id_fuente, nombre, tablas, modelo, metadatos["calidad"])
-    print(f"  export/      {', '.join(Path(r).name for r in exportaciones.values())}")
-    return {"id": id_fuente, "nombre": nombre, "descripcion": descripcion, "carpeta": id_fuente,
-            "exportaciones": exportaciones}
+    entrada = {"id": id_fuente, "nombre": nombre, "descripcion": descripcion, "carpeta": id_fuente}
+    if descargas:
+        entrada["exportaciones"] = exportar_todo(carpeta, id_fuente, nombre, tablas, modelo, metadatos["calidad"])
+        print(f"  export/      {', '.join(Path(r).name for r in entrada['exportaciones'].values())}")
+    return entrada
+
+
+# Fuente dinámica: la sirve la API (api/servidor.py) leyendo la base PostgreSQL local.
+FUENTE_BD = {
+    "id": "bd", "nombre": "PostgreSQL local",
+    "descripcion": "Base tablaspollet en localhost con los datos originales, procesada en vivo por la API.",
+    "tipo": "api", "ruta": "fuentes/bd",
+    "exportaciones": {"csv": "export/lavadero_bd_csv.zip", "excel": "export/lavadero_bd.xlsx",
+                      "sql": "export/lavadero_bd_postgres.sql"},
+}
 
 
 def main() -> None:
@@ -588,6 +600,7 @@ def main() -> None:
         exportar("original", "CSV originales",
                  "Archivos originales antes de cualquier limpieza (carpeta dataoriginal).",
                  f"{CARPETA_ORIGINAL.name}/*.csv", lambda: cargar_originales(CARPETA_ORIGINAL, EXCEL)),
+        FUENTE_BD,
     ]
     (SALIDA / "fuentes.json").write_text(json.dumps(fuentes, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Listo. fuentes.json con {len(fuentes)} fuentes en {SALIDA}")

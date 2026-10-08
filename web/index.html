@@ -111,6 +111,7 @@
         <h2>Criterios de normalización</h2>
         <ul class="criterios">
           <li><b>Mismo proceso para dos fuentes:</b> el ETL se ejecuta sobre el <b>Excel trabajado</b> (<code>Dataset_limpio_A1</code> y hojas 2.10) y sobre los <b>CSV originales</b> (<code>dataoriginal</code>). En ambos casos el producto financiero se asocia desde <code>Dataset_limpio_A2</code>, porque los originales no traen esa columna. Del Excel se descartan tablas dinámicas, consultas y columnas con fórmulas.</li>
+          <li><b>Base de datos local:</b> la fuente <b>PostgreSQL local</b> lee las tablas originales de la base <code>tablaspollet</code> a través de la API (<code>api/servidor.py</code>) y les aplica el mismo ETL en vivo. Si la base o la API no responden, la opción aparece <i>offline</i> y no se puede seleccionar.</li>
           <li><b>Datos de origen visibles:</b> en <i>Tablas › Datos de origen</i> se ve cada fuente sin limpiar. Los espacios sobrantes se marcan en rojo con <span class="espacio">·</span>.</li>
           <li><b>Geografía compartida:</b> región, ciudad y comuna se repetían en cada fila; se separan en <code>regiones → ciudades → comunas</code> y ambos dominios referencian <code>id_comuna</code>.</li>
           <li><b>Catálogos:</b> estado de cuenta, producto financiero, segmento, categoría y zona comercial pasan a tablas propias para evitar variantes de escritura.</li>
