@@ -1,15 +1,14 @@
 """
 API local: conecta la web con la base PostgreSQL "tablaspollet" y sirve el sitio.
 
-Lee las tablas originales de la base, les aplica el mismo ETL que a las fuentes estáticas
-(etl/procesar_excel.py) y entrega el resultado con el mismo formato (modelo.json + CSV por tabla),
+La base tiene el mismo modelo de datos que muestra la web (ver bd/crear_bd.py). La API lee sus tablas
+y las entrega con el mismo formato que las fuentes estáticas (modelo.json + CSV por tabla),
 de modo que la web puede alternar entre Excel trabajado, CSV originales y la base.
 
 Endpoints:
     GET /api/estado                          Estado de la conexión y filas por tabla de la base.
-    GET /api/fuentes/bd/modelo.json          Reprocesa la base, publica el resultado en el esquema "lavadero"
-                                             y devuelve el modelo y la calidad.
-    GET /api/fuentes/bd/{tabla}.csv          Tabla procesada (del último reproceso).
+    GET /api/fuentes/bd/modelo.json          Lee la base y devuelve el modelo, las filas y la calidad.
+    GET /api/fuentes/bd/{tabla}.csv          Tabla leída de la base (de la última lectura).
     GET /api/fuentes/bd/export/{archivo}     Descargas CSV (.zip), Excel (.xlsx) y PostgreSQL (.sql).
     GET /                                    Sitio web (carpeta web/).
 
@@ -20,10 +19,12 @@ Variables de entorno opcionales: PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE,
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
 import threading
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -38,11 +39,10 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(RAIZ / "etl"), str(RAIZ / "bd")]
 
 import procesar_excel as etl  # noqa: E402
-from crear_bd import BASE, CONEXION, TABLAS_BD  # noqa: E402
-from exportar import sql_postgres  # noqa: E402
+from crear_bd import BASE, CONEXION, ESQUEMA, TABLAS_BD, leer_modelo  # noqa: E402
+from exportar import exportar_todo  # noqa: E402
 
 CACHE = RAIZ / "api" / ".cache" / "bd"
-ESQUEMA = etl.FUENTE_BD["esquema"]
 URL_BD = f"postgresql://{CONEXION['user']}@{CONEXION['host']}:{CONEXION['port']}/{BASE}"
 bloqueo = threading.Lock()
 
@@ -62,37 +62,22 @@ def conectar() -> psycopg.Connection:
     return psycopg.connect(**CONEXION, dbname=BASE, connect_timeout=2)
 
 
-def leer_bd() -> dict[str, pd.DataFrame]:
-    datos = {}
+def actualizar(descargas: bool = False) -> None:
+    """Lee las tablas del modelo desde la base y las deja como modelo.json + un CSV por tabla."""
     with conectar() as conn:
-        for tabla, (clave, _) in TABLAS_BD.items():
-            columnas = etl.COLUMNAS_FUENTE[clave]
-            consulta = f"SELECT {', '.join(c.lower() for c in columnas)} FROM {tabla} ORDER BY 1"
-            df = pd.DataFrame(conn.execute(consulta).fetchall(), columns=columnas, dtype=object).fillna("")
-            datos[clave] = etl._seleccionar(df, clave, tabla)
-    return datos
-
-
-def reprocesar(descargas: bool = False) -> None:
-    datos = leer_bd()
-
-    def cargar() -> dict[str, pd.DataFrame]:
-        etl.registrar("cartera_clientes", "producto_financiero", "La cartera original no trae la columna Producto",
-                      len(datos["cartera"]), "Se asocia desde la tabla productos_cartera por ID_Cliente")
-        return datos
-
+        tablas, modelo, hallazgos = leer_modelo(conn)
+    f = etl.FUENTE_BD
     with bloqueo:
         shutil.rmtree(CACHE, ignore_errors=True)
-        f = etl.FUENTE_BD
-        etl.exportar(f["id"], f["nombre"], f["descripcion"], URL_BD, cargar, carpeta=CACHE, descargas=descargas,
-                     al_procesar=publicar)
-
-
-def publicar(tablas: dict[str, pd.DataFrame], modelo: dict) -> None:
-    """Deja el resultado del ETL en el esquema "lavadero" para consultarlo con SQL (las consultas que copia la web)."""
-    sql = sql_postgres(tablas, modelo, ESQUEMA, f"Lavadero de datos · {etl.FUENTE_BD['nombre']}")
-    with conectar() as conn:
-        conn.execute(sql)
+        CACHE.mkdir(parents=True, exist_ok=True)
+        for nombre, df in tablas.items():
+            df.to_csv(CACHE / f"{nombre}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+            modelo[nombre]["filas"] = len(df)
+        metadatos = {"id": f["id"], "nombre": f["nombre"], "descripcion": f["descripcion"], "fuente": URL_BD,
+                     "generado": datetime.now().isoformat(timespec="seconds"), "tablas": modelo, "calidad": hallazgos}
+        (CACHE / "modelo.json").write_text(json.dumps(metadatos, ensure_ascii=False, indent=2), encoding="utf-8")
+        if descargas:
+            exportar_todo(CACHE, f["id"], f["nombre"], tablas, modelo, hallazgos)
 
 
 def error_bd(e: Exception) -> HTTPException:
@@ -122,7 +107,7 @@ def estado():
 @app.get("/api/fuentes/bd/modelo.json")
 def modelo():
     try:
-        reprocesar()
+        actualizar()
     except psycopg.Error as e:
         raise error_bd(e) from e
     return FileResponse(CACHE / "modelo.json", headers={"Cache-Control": "no-store"})
@@ -135,9 +120,9 @@ def archivo(ruta: str):
         raise HTTPException(status_code=404)
     try:
         if ruta.startswith("export/"):
-            reprocesar(descargas=True)
+            actualizar(descargas=True)
         elif not destino.exists():
-            reprocesar()
+            actualizar()
     except psycopg.Error as e:
         raise error_bd(e) from e
     if not destino.is_file():

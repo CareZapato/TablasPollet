@@ -556,13 +556,10 @@ def procesar(fuente: dict[str, pd.DataFrame]) -> tuple[dict[str, pd.DataFrame], 
 
 def exportar(id_fuente: str, nombre: str, descripcion: str, archivo: str,
              cargar: Callable[[], dict[str, pd.DataFrame]], carpeta: Path | None = None,
-             descargas: bool = True,
-             al_procesar: Callable[[dict[str, pd.DataFrame], dict], None] | None = None) -> dict:
+             descargas: bool = True) -> dict:
     calidad.clear()
     fuente = cargar()
     tablas, modelo = procesar(fuente)
-    if al_procesar:
-        al_procesar(tablas, modelo)
     carpeta = carpeta or SALIDA / id_fuente
     carpeta.mkdir(parents=True, exist_ok=True)
     print(f"[{id_fuente}] {nombre}")
@@ -588,8 +585,8 @@ def exportar(id_fuente: str, nombre: str, descripcion: str, archivo: str,
 # Fuente dinámica: la sirve la API (api/servidor.py) leyendo la base PostgreSQL local.
 FUENTE_BD = {
     "id": "bd", "nombre": "PostgreSQL local",
-    "descripcion": "Base tablaspollet en localhost con los datos originales, procesada en vivo por la API.",
-    "tipo": "api", "ruta": "fuentes/bd", "esquema": "lavadero",
+    "descripcion": "Base tablaspollet en localhost con el modelo de la web, cargada desde los CSV originales.",
+    "tipo": "api", "ruta": "fuentes/bd", "esquema": "public",
     "exportaciones": {"csv": "export/lavadero_bd_csv.zip", "excel": "export/lavadero_bd.xlsx",
                       "sql": "export/lavadero_bd_postgres.sql"},
 }

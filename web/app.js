@@ -152,7 +152,7 @@ async function seleccionarFuente(id) {
 
 const consultas = new Map();
 const enBD = () => estado.fuente === "bd";
-const esquemaBD = () => fuentes.bd?.esquema ?? api.estado?.esquema ?? "lavadero";
+const esquemaBD = () => fuentes.bd?.esquema ?? api.estado?.esquema ?? "public";
 
 function botonSQL(clave, sql) {
   if (!enBD()) return "";

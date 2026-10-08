@@ -1,9 +1,9 @@
 """
-Verifica que la base "tablaspollet" contenga exactamente los datos de los CSV originales.
+Verifica que la base "tablaspollet" tenga el modelo de la web con los datos de los CSV originales.
 
-Lee cada CSV de web/data/dataoriginal tal cual (texto, sin limpiar) y lo compara con su tabla
-en PostgreSQL: cantidad de filas, columnas y cada celda, incluidos espacios y mayúsculas.
-La tabla productos_cartera se compara con la hoja Dataset_limpio_A2 del Excel, que es su origen.
+  1. Estructura: en public solo están las tablas del modelo (más hallazgos_calidad) y no quedan esquemas extra.
+  2. Tablas origen_*: cada celda coincide con el CSV original de web/data/dataoriginal, tal cual (sin limpiar).
+  3. Tablas normalizadas y hallazgos: coinciden exactamente con lo que produce el ETL sobre esos CSV.
 
 Uso:
     python bd/verificar_bd.py
@@ -20,58 +20,71 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "etl"))
 
-from crear_bd import BASE, CONEXION, TABLAS_BD  # noqa: E402
-from procesar_excel import (  # noqa: E402
-    ARCHIVOS_ORIGINALES, CARPETA_ORIGINAL, COLUMNAS_FUENTE, EXCEL, HOJAS_EXCEL, a_texto_crudo,
-)
+import procesar_excel as etl  # noqa: E402
+from crear_bd import BASE, CONEXION, TABLAS_BD, leer_modelo, procesar_originales  # noqa: E402
 
 
-def leer_origen(clave: str) -> tuple[str, pd.DataFrame]:
-    if clave == "producto_cartera":
-        df = pd.read_excel(EXCEL, sheet_name=HOJAS_EXCEL[clave], dtype=object).dropna(how="all")
-        df.columns = [str(c).strip() for c in df.columns]
-        return f"{EXCEL.name} › {HOJAS_EXCEL[clave]}", df.map(a_texto_crudo)
-    archivo = sorted(CARPETA_ORIGINAL.glob(ARCHIVOS_ORIGINALES[clave]))[0]
-    return archivo.name, pd.read_csv(archivo, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+def como_csv(df: pd.DataFrame) -> str:
+    return df.to_csv(index=False, lineterminator="\n")
 
 
-def ordenar(df: pd.DataFrame) -> pd.DataFrame:
-    return df.sort_values(list(df.columns), kind="stable").reset_index(drop=True)
+def verificar_estructura(conn: psycopg.Connection) -> bool:
+    tablas = {f[0] for f in conn.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")}
+    esquemas = [f[0] for f in conn.execute(
+        "SELECT schema_name FROM information_schema.schemata "
+        "WHERE schema_name NOT IN ('public', 'information_schema') AND schema_name NOT LIKE 'pg\\_%'")]
+    faltan, sobran = set(TABLAS_BD) - tablas, tablas - set(TABLAS_BD)
+    fks = conn.execute("SELECT count(*) FROM information_schema.table_constraints "
+                       "WHERE table_schema = 'public' AND constraint_type = 'FOREIGN KEY'").fetchone()[0]
+    print(f"Estructura: {len(tablas)} tablas en public · {fks} claves foráneas")
+    for texto, lista in [("faltan", faltan), ("sobran", sobran), ("esquemas extra", esquemas)]:
+        if lista:
+            print(f"  {texto}: {sorted(lista)}")
+    return not (faltan or sobran or esquemas)
 
 
-def comparar(conn: psycopg.Connection, tabla: str, clave: str) -> bool:
-    nombre, origen = leer_origen(clave)
-    columnas = COLUMNAS_FUENTE[clave]
-    extra = [c for c in origen.columns if c not in columnas]
-    filas_bd = conn.execute(f"SELECT {', '.join(c.lower() for c in columnas)} FROM {tabla}").fetchall()
-    bd = pd.DataFrame(filas_bd, columns=columnas, dtype=object).fillna("")
-
-    print(f"\n{tabla}  <-  {nombre}")
-    print(f"  filas: origen {len(origen)} · base {len(bd)}")
-    if extra:
-        print(f"  columnas del origen que no se cargan (el ETL no las usa): {extra}")
-
-    ok = len(origen) == len(bd)
-    if ok:
-        a, b = ordenar(origen[columnas]), ordenar(bd)
-        distintas = (a != b)
-        n = int(distintas.to_numpy().sum())
-        if n:
-            ok = False
-            print(f"  {n} celdas distintas. Ejemplos:")
-            for fila, col in list(zip(*distintas.to_numpy().nonzero()))[:5]:
-                print(f"    {columnas[col]}: origen {a.iat[fila, col]!r} · base {b.iat[fila, col]!r}")
-        con_espacios = int(a.map(lambda v: v != v.strip()).to_numpy().sum())
-        print(f"  {len(columnas)} columnas · {a.size} celdas idénticas · {con_espacios} con espacios sobrantes conservados")
-    print("  OK" if ok else "  DIFERENTE")
+def verificar_origen(bd: dict[str, pd.DataFrame]) -> bool:
+    ok = True
+    print("\nTablas origen_* contra los CSV originales (celda por celda, sin limpiar):")
+    for clave, patron in etl.ARCHIVOS_ORIGINALES.items():
+        archivo = sorted(etl.CARPETA_ORIGINAL.glob(patron))[0]
+        csv = pd.read_csv(archivo, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        csv.columns = [c.strip() for c in csv.columns]
+        columnas = etl.COLUMNAS_FUENTE[clave]
+        tabla = bd[f"origen_{clave}"].fillna("")
+        distintas = len(csv) != len(tabla) or (csv[columnas].to_numpy(dtype=object) != tabla[columnas].to_numpy()).any()
+        espacios = int(tabla.map(lambda v: v != v.strip()).to_numpy().sum())
+        extra = [c for c in csv.columns if c not in columnas]
+        print(f"  origen_{clave:<12} {len(tabla):>5} filas · {tabla.size:>6} celdas · "
+              f"{espacios} con espacios sobrantes conservados · {'DIFERENTE' if distintas else 'OK'}  <- {archivo.name}"
+              + (f" (columnas no usadas: {extra})" if extra else ""))
+        ok &= not distintas
     return ok
+
+
+def verificar_modelo(bd: dict[str, pd.DataFrame], hallazgos_bd: list[dict]) -> bool:
+    tablas, modelo, hallazgos = procesar_originales()
+    ok = True
+    print("\nTablas del modelo contra el ETL aplicado a los CSV originales:")
+    for nombre, meta in modelo.items():
+        if meta.get("origen"):
+            continue
+        igual = como_csv(bd[nombre]) == como_csv(tablas[nombre])
+        print(f"  {nombre:<22} {len(bd[nombre]):>5} filas · {'OK' if igual else 'DIFERENTE'}")
+        ok &= igual
+    igual = hallazgos_bd == hallazgos
+    print(f"  hallazgos_calidad      {len(hallazgos_bd):>5} filas · {'OK' if igual else 'DIFERENTE'}")
+    return ok and igual
 
 
 def main() -> None:
     with psycopg.connect(**CONEXION, dbname=BASE, connect_timeout=5) as conn:
-        resultados = [comparar(conn, tabla, clave) for tabla, (clave, _) in TABLAS_BD.items()]
-    print("\nResultado:", "la base coincide con los datos originales." if all(resultados)
-          else "hay diferencias con los datos originales.")
+        estructura = verificar_estructura(conn)
+        bd, _, hallazgos = leer_modelo(conn)
+    resultados = [estructura, verificar_origen(bd), verificar_modelo(bd, hallazgos)]
+    print("\nResultado:", "la base tiene el modelo de la web con los datos de los CSV originales."
+          if all(resultados) else "hay diferencias.")
     sys.exit(0 if all(resultados) else 1)
 
 

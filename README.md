@@ -8,14 +8,15 @@ El mismo proceso se aplica a tres fuentes, y la web permite alternar entre ellas
 
 - **Excel trabajado**: hojas del Excel después de la limpieza manual.
 - **CSV originales**: archivos de `web/data/dataoriginal`, antes de cualquier limpieza.
-- **PostgreSQL local**: base `tablaspollet` con los mismos datos originales, leída y procesada en vivo por la API.
+- **PostgreSQL local**: base `tablaspollet` con el mismo modelo de datos de la web, cargada desde los CSV originales.
 
 ## Estructura
 
 ```
 etl/procesar_excel.py    Proceso ETL para todas las fuentes -> CSV + modelo.json
-bd/crear_bd.py           Crea la base tablaspollet y carga las tablas originales (sin limpiar)
-api/servidor.py          API FastAPI: conecta con PostgreSQL, aplica el ETL y sirve la web
+bd/crear_bd.py           Crea la base tablaspollet con el modelo de la web y los datos de los CSV originales
+bd/verificar_bd.py       Comprueba la estructura y que los datos coincidan con los CSV originales
+api/servidor.py          API FastAPI: lee las tablas de PostgreSQL y sirve la web
 web/                     Sitio estático (index.html, app.js, styles.css)
 web/data/dataoriginal/   CSV originales sin limpiar (entrada)
 web/data/excel/          Resultado del ETL sobre el Excel
@@ -48,24 +49,30 @@ Conexión por defecto: `localhost:5432`, base `tablaspollet`, usuario `postgres`
 (se puede cambiar con `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` y `PGDATABASE`).
 
 ```bash
-python bd/crear_bd.py      # crea la base y carga las 6 tablas originales (también deja bd/tablaspollet_original.sql)
+python bd/crear_bd.py      # borra la estructura anterior y crea el modelo de la web (también deja bd/tablaspollet.sql)
+python bd/verificar_bd.py  # opcional: comprueba estructura y datos contra los CSV originales
 python api/servidor.py     # API + web en http://localhost:8000
 ```
+
+La base sigue el mismo modelo que muestra la web, en el esquema `public`:
+
+- **15 tablas normalizadas** (geografía, cartera financiera y comercial) con PK, FK, tipos y comentarios,
+  cargadas con el resultado del ETL sobre los CSV originales.
+- **5 tablas `origen_*`** con los CSV originales tal cual (texto, sin limpiar) y `nro_fila` como clave.
+- **`hallazgos_calidad`**: los problemas que detectó el ETL y la acción aplicada.
 
 Endpoints:
 
 | Método y ruta | Descripción |
 |---|---|
 | `GET /api/estado` | Estado de la conexión y filas por tabla |
-| `GET /api/fuentes/bd/modelo.json` | Lee la base, aplica el ETL y devuelve modelo y calidad |
-| `GET /api/fuentes/bd/{tabla}.csv` | Tabla procesada |
+| `GET /api/fuentes/bd/modelo.json` | Lee las tablas de la base y devuelve modelo, filas y calidad |
+| `GET /api/fuentes/bd/{tabla}.csv` | Tabla leída de la base |
 | `GET /api/fuentes/bd/export/{archivo}` | Descargas CSV (.zip), Excel (.xlsx) y SQL |
 
-Cada vez que la API lee la base, publica el resultado del ETL en el esquema `lavadero` de `tablaspollet`
-(tablas normalizadas con PK, FK y comentarios). Con la fuente **PostgreSQL local** activa, la web muestra botones
-**SQL** junto a los KPIs, la comparación, las tarjetas de tablas, la tabla abierta (con su filtro, búsqueda y
-orden), el modelo, la calidad y cada resultado de la guía: copian al portapapeles la consulta que devuelve ese
-mismo valor, lista para ejecutar en psql o pgAdmin. Las tablas `origen_*` se consultan en las tablas crudas de `public`.
+Con la fuente **PostgreSQL local** activa, la web muestra botones **SQL** junto a los KPIs, la comparación,
+las tarjetas de tablas, la tabla abierta (con su filtro, búsqueda y orden), el modelo, la calidad y cada resultado
+de la guía: copian al portapapeles la consulta que devuelve ese mismo valor, lista para ejecutar en psql o pgAdmin.
 Las consultas están en `web/consultas.js`.
 
 La web consulta `/api/estado` cada 10 segundos. Si la API o la base no responden, la opción
