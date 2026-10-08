@@ -287,6 +287,140 @@ function renderCalidad() {
     a.addEventListener("click", () => abrirTabla(a.dataset.ref)));
 }
 
+// ------------------------------------------------------------------ Guía paso a paso
+
+const guia = { estados: new Set(), base: [] };
+
+function prepararGuia() {
+  const d = estado.datos;
+  const porId = (tabla, col) => new Map(d[tabla].map((f) => [f[col], f]));
+  const clientes = porId("cartera_clientes", "id_cliente");
+  const comunas = porId("comunas", "id_comuna");
+  const ciudades = porId("ciudades", "id_ciudad");
+  const regiones = porId("regiones", "id_region");
+  const estados = porId("estados_cuenta", "id_estado");
+  const productos = porId("productos_financieros", "id_producto_financiero");
+  // Equivalente a Dataset_limpio_A2: solo cuentas con producto informado.
+  guia.base = d.cuentas.filter((c) => c.id_producto_financiero).map((c) => {
+    const comuna = comunas.get(clientes.get(c.id_cliente).id_comuna);
+    const region = regiones.get(ciudades.get(comuna.id_ciudad).id_region);
+    return {
+      producto: productos.get(c.id_producto_financiero).nombre,
+      estado: estados.get(c.id_estado).nombre,
+      region: region.nombre,
+      comuna: comuna.nombre,
+      monto: Number(c.monto_facturado_clp),
+      dias: Number(c.dias_morosidad),
+    };
+  });
+}
+
+function agrupar(filas, clave) {
+  const grupos = new Map();
+  for (const f of filas) {
+    const k = clave(f);
+    if (!grupos.has(k)) grupos.set(k, []);
+    grupos.get(k).push(f);
+  }
+  return grupos;
+}
+
+const suma = (filas) => filas.reduce((s, f) => s + f.monto, 0);
+const promedioDias = (filas) => filas.reduce((s, f) => s + f.dias, 0) / (filas.length || 1);
+const fmtDec = new Intl.NumberFormat("es-CL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtPct = new Intl.NumberFormat("es-CL", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+function tablaHTML(cabeceras, filas, total) {
+  const tr = (celdas, clase = "") => `<tr class="${clase}">${celdas.map((c, i) =>
+    `<td class="${i > 0 && /^[\d$]/.test(String(c).replace(/<[^>]+>/g, "")) ? "num" : ""}">${c}</td>`).join("")}</tr>`;
+  return `<div class="tabla-wrap"><table class="tabla-guia">
+    <thead><tr>${cabeceras.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+    <tbody>${filas.map((f) => Array.isArray(f) ? tr(f) : tr(f.celdas, f.clase)).join("")}
+    ${total ? tr(total, "total") : ""}</tbody></table></div>`;
+}
+
+function renderGuiaFiltrada() {
+  const filas = guia.estados.size ? guia.base.filter((f) => guia.estados.has(f.estado)) : guia.base;
+
+  const porProducto = [...agrupar(filas, (f) => f.producto)].sort((a, b) => a[0].localeCompare(b[0], "es"));
+  $("#g-pivot1").innerHTML = tablaHTML(
+    ["Producto", "Suma de Monto_Facturado_CLP", "Promedio de Dias_Morosidad"],
+    porProducto.map(([p, fs]) => [p, fmtCLP.format(suma(fs)), fmtDec.format(promedioDias(fs))]),
+    ["Total general", fmtCLP.format(suma(filas)), fmtDec.format(promedioDias(filas))]);
+
+  const porRegion = [...agrupar(filas, (f) => f.region)].sort((a, b) => a[0].localeCompare(b[0], "es"));
+  const filasRegion = porRegion.flatMap(([r, fs]) => [
+    { celdas: [r, fmtCLP.format(suma(fs)), fmtNum.format(fs.length)], clase: "subtotal" },
+    ...[...agrupar(fs, (f) => f.comuna)].sort((a, b) => a[0].localeCompare(b[0], "es"))
+      .map(([c, fc]) => ({ celdas: [`<span class="sangria">${c}</span>`, fmtCLP.format(suma(fc)), fmtNum.format(fc.length)] })),
+  ]);
+  $("#g-pivot2").innerHTML = tablaHTML(
+    ["Región / Comuna", "Suma de Monto_Facturado_CLP", "Cuenta de ID_Cliente"],
+    filasRegion, ["Total general", fmtCLP.format(suma(filas)), fmtNum.format(filas.length)]);
+
+  const total = suma(filas);
+  const criticos = filas.filter((f) => f.dias > 60).length;
+  $("#g-kpis").innerHTML = [
+    ["Ingresos totales facturados", fmtCLP.format(total), `${fmtNum.format(filas.length)} clientes`],
+    ["Ticket promedio por cliente", fmtCLP.format(filas.length ? total / filas.length : 0), "Ingresos ÷ N° clientes"],
+    ["Tasa de morosidad crítica", fmtPct.format(filas.length ? criticos / filas.length : 0), `${fmtNum.format(criticos)} clientes con más de 60 días`],
+  ].map(([t, v, s]) => `<div class="kpi"><div class="muted">${t}</div><div class="valor">${v}</div><div class="muted">${s}</div></div>`).join("");
+
+  const barras = porRegion.map(([r, fs]) => [r.replace(/^Región (del |de la |de )?/, ""), suma(fs)]).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(1, ...barras.map((b) => b[1]));
+  $("#g-chart").innerHTML = `<div class="barras-titulo">Total facturado por región${guia.estados.size ? ` · ${[...guia.estados].join(", ")}` : ""}</div>` +
+    barras.map(([r, v]) => `<div class="barra-fila"><span class="barra-etiqueta">${r}</span>
+      <div class="barra-pista"><div class="barra" style="width:${(v / max) * 100}%"></div></div>
+      <span class="barra-valor">${fmtCLP.format(v)}</span></div>`).join("");
+
+  document.querySelectorAll("#g-slicer button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.estado ? guia.estados.has(b.dataset.estado) : guia.estados.size === 0));
+}
+
+function renderGuia() {
+  prepararGuia();
+  const estados = estado.datos.estados_cuenta.map((e) => e.nombre);
+  $("#g-slicer").innerHTML = `<span class="slicer-titulo">Estado_Cuenta</span>
+    <button data-estado="">Todos</button>${estados.map((e) => `<button data-estado="${e}">${e}</button>`).join("")}
+    <span class="muted">Ctrl + clic para elegir varios</span>`;
+  document.querySelectorAll("#g-slicer button").forEach((b) => b.addEventListener("click", (ev) => {
+    const e = b.dataset.estado;
+    if (!e) guia.estados.clear();
+    else if (ev.ctrlKey || ev.metaKey) guia.estados.has(e) ? guia.estados.delete(e) : guia.estados.add(e);
+    else guia.estados = new Set(guia.estados.size === 1 && guia.estados.has(e) ? [] : [e]);
+    renderGuiaFiltrada();
+  }));
+  renderGuiaFiltrada();
+
+  const d = estado.datos;
+  const sucursales = new Map(d.sucursales.map((s) => [s.id_sucursal, s]));
+  const zonas = new Map(d.zonas_comerciales.map((z) => [z.id_zona, z.nombre]));
+  const zonaDe = (idSuc) => zonas.get(sucursales.get(idSuc)?.id_zona) ?? "Sin sucursal";
+  const ejemplos = [
+    ...d.ventas.slice(0, 6).map((v) => [v.id_transaccion, v.id_sucursal, `<mark>${zonaDe(v.id_sucursal)}</mark>`, v.id_producto,
+      fmtNum.format(v.cantidad), fmtCLP.format(v.precio_unitario_clp), `<b>${fmtCLP.format(v.monto_total_clp)}</b>`]),
+    ...d.ventas_rechazadas.filter((v) => v.id_producto === "PROD-999").map((v) => ({
+      clase: "alerta",
+      celdas: [v.id_transaccion, v.id_sucursal, zonaDe(v.id_sucursal), v.id_producto, fmtNum.format(v.cantidad),
+        `${fmtCLP.format(0)} ⚠`, `${fmtCLP.format(0)} · producto inexistente`],
+    })),
+  ];
+  $("#g-cruce").innerHTML = tablaHTML(
+    ["ID_Transaccion", "ID_Sucursal", "Zona_Comercial", "ID_Producto", "Cantidad", "Precio_Unitario_CLP", "Total_Facturado_CLP"], ejemplos);
+
+  const porZona = [...agrupar(d.ventas.map((v) => ({ zona: zonaDe(v.id_sucursal), monto: Number(v.monto_total_clp) })), (v) => v.zona)]
+    .sort((a, b) => suma(b[1]) - suma(a[1]));
+  const totalVentas = suma(d.ventas.map((v) => ({ monto: Number(v.monto_total_clp) })));
+  $("#g-zonas").innerHTML = tablaHTML(["Zona_Comercial", "N° ventas", "Suma de Total_Facturado_CLP"],
+    porZona.map(([z, vs]) => [z, fmtNum.format(vs.length), fmtCLP.format(suma(vs))]),
+    ["Total general", fmtNum.format(d.ventas.length), fmtCLP.format(totalVentas)]);
+
+  document.querySelectorAll(".indice a").forEach((a) => a.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    document.querySelector(a.getAttribute("href")).scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+}
+
 // ------------------------------------------------------------------ Navegación
 
 let diagramaDibujado = false;
@@ -318,6 +452,7 @@ async function iniciar() {
   renderResumen();
   renderModelo();
   renderCalidad();
+  renderGuia();
   const inicial = location.hash.slice(1);
   if (document.getElementById(`vista-${inicial}`)) mostrarVista(inicial);
 }

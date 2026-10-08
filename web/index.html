@@ -20,6 +20,7 @@
       <button data-vista="tablas">Tablas</button>
       <button data-vista="modelo">Modelo de datos</button>
       <button data-vista="calidad">Calidad de datos</button>
+      <button data-vista="guia">Guía paso a paso</button>
     </nav>
   </header>
 
@@ -91,6 +92,202 @@
           <li><b>Hechos:</b> <code>ventas</code> guarda el precio unitario vigente y el monto total calculado; <code>cuentas</code> separa la situación financiera del cliente y deriva el nivel de riesgo con la misma regla del Excel.</li>
           <li><b>Dos dominios independientes:</b> la cartera financiera (<code>CLI-0001</code>) y el módulo comercial (<code>CLI-001</code>) no comparten RUT, por lo que se modelan como entidades de cliente distintas.</li>
         </ul>
+      </div>
+    </section>
+
+    <section id="vista-guia" class="vista">
+      <div class="panel guia-intro">
+        <h2>Guía paso a paso: del Excel al cuadro de mando</h2>
+        <p>Esta guía explica cómo resolver cada paso de la actividad en <b>Excel</b> (con nombres de funciones en español),
+          con la equivalencia en <b>Google Sheets</b> y <b>Looker Studio</b>. Debajo de cada paso hay un
+          <mark>resultado de ejemplo</mark> calculado con los datos reales, para que compares tu resultado.</p>
+        <p>Las rutas de menú se muestran así: <span class="menu">Insertar</span> › <span class="menu">Tabla dinámica</span>.
+          Las <mark>palabras destacadas</mark> son los conceptos o campos clave de cada paso.</p>
+        <ol class="indice">
+          <li><a href="#paso-1">Construcción de tablas dinámicas multidimensionales</a></li>
+          <li><a href="#paso-2">Cálculo de tarjetas de KPIs principales</a></li>
+          <li><a href="#paso-3">Gráficos visuales y segmentador (slicer)</a></li>
+          <li><a href="#paso-4">Cruce de datos de sucursal y cálculo del total</a></li>
+        </ol>
+      </div>
+
+      <!-- PASO 1 -->
+      <article id="paso-1" class="panel paso">
+        <header class="paso-cab"><span class="paso-num">1</span>
+          <div><h2>Construcción de tablas dinámicas multidimensionales</h2>
+            <p class="muted">Pestaña <code>Tablas_Dinamicas</code> · fuente <code>Dataset_limpio_A2</code></p></div>
+        </header>
+
+        <p>Una <mark>tabla dinámica</mark> resume miles de filas agrupándolas por una o más <mark>dimensiones</mark>
+          (categorías como Producto o Región) y calculando <mark>métricas</mark> sobre ellas (suma, promedio, conteo).
+          Es "multidimensional" porque puedes anidar varias dimensiones, por ejemplo Región › Comuna.</p>
+
+        <h3>Preparación</h3>
+        <ol>
+          <li>Usa la hoja <code>Dataset_limpio_A2</code>: es la que tiene la columna <mark>Producto</mark> y los estados ya unificados.</li>
+          <li>Selecciona solo las columnas de datos <b>A:L</b> (de <code>ID_Cliente</code> a <code>Producto</code>). No incluyas las columnas de fórmulas auxiliares (N en adelante), porque la tabla dinámica las tomaría como campos.</li>
+          <li>Truco: convierte el rango en tabla con <kbd>Ctrl</kbd> + <kbd>T</kbd>. Así, si agregas filas, la tabla dinámica las incluye al <mark>Actualizar</mark>.</li>
+        </ol>
+
+        <h3>Tabla dinámica 1: Facturación y morosidad promedio por categoría de producto</h3>
+        <ol>
+          <li><span class="menu">Insertar</span> › <span class="menu">Tabla dinámica</span> › <span class="menu">Nueva hoja de cálculo</span>.</li>
+          <li>Haz doble clic en la pestaña nueva y cámbiale el nombre a <code>Tablas_Dinamicas</code>.</li>
+          <li>Arrastra los campos en el panel de la derecha:
+            <ul>
+              <li><b>Filas:</b> <mark>Producto</mark></li>
+              <li><b>Valores:</b> <mark>Monto_Facturado_CLP</mark> → queda como <i>Suma de Monto_Facturado_CLP</i>.</li>
+              <li><b>Valores:</b> <mark>Dias_Morosidad</mark> → clic en el campo › <span class="menu">Configuración de campo de valor</span> › <mark>Promedio</mark>.</li>
+            </ul>
+          </li>
+          <li>Da formato: clic derecho en los montos › <span class="menu">Formato de número</span> › Moneda sin decimales; y el promedio con 1 decimal.</li>
+        </ol>
+        <div class="resultado"><div class="resultado-titulo">Resultado de ejemplo</div><div id="g-pivot1"></div></div>
+
+        <h3>Tabla dinámica 2: Total facturado y número de clientes por región / comuna</h3>
+        <ol>
+          <li>Vuelve a seleccionar los datos de <code>Dataset_limpio_A2</code> › <span class="menu">Insertar</span> › <span class="menu">Tabla dinámica</span> › <span class="menu">Hoja de cálculo existente</span> y elige una celda libre de <code>Tablas_Dinamicas</code> (por ejemplo <code>F3</code>), para tener ambas en la misma pestaña.</li>
+          <li><b>Filas:</b> <mark>Region</mark> y, debajo, <mark>Comuna</mark>. El orden importa: la primera es el nivel superior y la segunda se anida dentro.</li>
+          <li><b>Valores:</b> <mark>Monto_Facturado_CLP</mark> (Suma) y <mark>ID_Cliente</mark>. Como es texto, Excel lo resume automáticamente como <mark>Cuenta</mark>: ese es el número de clientes.</li>
+          <li>Opcional: <span class="menu">Diseño</span> › <span class="menu">Diseño de informe</span> › <span class="menu">Mostrar en formato tabular</span> para ver región y comuna en columnas separadas.</li>
+        </ol>
+        <div class="resultado"><div class="resultado-titulo">Resultado de ejemplo</div><div id="g-pivot2"></div></div>
+
+        <div class="tip"><b>En Google Sheets:</b> <span class="menu">Insertar</span> › <span class="menu">Tabla dinámica</span>. En "Valores" elige <mark>Resumir por: SUM</mark>, <mark>AVERAGE</mark> o <mark>COUNTA</mark>.</div>
+      </article>
+
+      <!-- PASO 2 -->
+      <article id="paso-2" class="panel paso">
+        <header class="paso-cab"><span class="paso-num">2</span>
+          <div><h2>Cálculo de tarjetas de KPIs principales</h2>
+            <p class="muted">Pestaña <code>Dashboard_Ejecutivo</code> o Looker Studio</p></div>
+        </header>
+
+        <p>Un <mark>KPI</mark> (indicador clave de desempeño) es un número que resume la salud del negocio de un vistazo.
+          Una <mark>tarjeta KPI</mark> lo muestra en grande, con un título corto y, opcionalmente, una comparación.</p>
+
+        <h3>Fórmulas</h3>
+        <p>Crea la pestaña <code>Dashboard_Ejecutivo</code>. En la fila 1 escribe los títulos y en la fila 2 las fórmulas:</p>
+        <table class="tabla-formulas">
+          <thead><tr><th>KPI</th><th>Qué mide</th><th>Fórmula (Excel en español)</th></tr></thead>
+          <tbody>
+            <tr><td><mark>Ingresos totales facturados (CLP)</mark></td><td>Suma de todo lo facturado</td>
+              <td><code>=SUMA(Dataset_limpio_A2!H:H)</code></td></tr>
+            <tr><td><mark>Ticket promedio por cliente</mark></td><td>Cuánto factura en promedio cada cliente</td>
+              <td><code>=A2/(CONTARA(Dataset_limpio_A2!A:A)-1)</code><br><span class="muted">El <b>-1</b> descuenta la fila de encabezado. Equivale a <code>=PROMEDIO(Dataset_limpio_A2!H:H)</code> porque hay una fila por cliente.</span></td></tr>
+            <tr><td><mark>Tasa de morosidad crítica</mark></td><td>% de clientes con más de 60 días de mora</td>
+              <td><code>=CONTAR.SI(Dataset_limpio_A2!I:I;"&gt;60")/(CONTARA(Dataset_limpio_A2!A:A)-1)</code><br><span class="muted">Formato <b>Porcentaje</b>. Se usa <b>&gt; 60 días</b> (90 y 120), el mismo umbral que el "Riesgo Alto" del dataset.</span></td></tr>
+          </tbody>
+        </table>
+
+        <h3>Diseño de la tarjeta</h3>
+        <ol>
+          <li>Selecciona 3 celdas por tarjeta (ej. <code>B2:D4</code>) › <span class="menu">Inicio</span> › <span class="menu">Combinar y centrar</span>.</li>
+          <li>Escribe dentro <code>=A2</code> (la fórmula del KPI), fuente de <mark>tamaño 24 y negrita</mark>, y encima un título pequeño en gris.</li>
+          <li>Agrega <mark>borde y relleno suave</mark> para que parezca una tarjeta. Repite para los 3 KPIs, uno al lado del otro en la parte superior.</li>
+        </ol>
+
+        <div class="tip"><b>En Looker Studio:</b> conecta la hoja como fuente de datos › <span class="menu">Añadir un gráfico</span> › <mark>Tarjeta de resultados</mark> (Scorecard).
+          <ul>
+            <li>Ingresos: métrica <code>SUM(Monto_Facturado_CLP)</code>.</li>
+            <li>Ticket: <span class="menu">Añadir campo</span> calculado <code>SUM(Monto_Facturado_CLP) / COUNT_DISTINCT(ID_Cliente)</code>.</li>
+            <li>Tasa crítica: campo calculado <code>SUM(CASE WHEN Dias_Morosidad &gt; 60 THEN 1 ELSE 0 END) / COUNT(ID_Cliente)</code>, con tipo <mark>Porcentaje</mark>.</li>
+          </ul>
+        </div>
+        <div class="resultado"><div class="resultado-titulo">Resultado de ejemplo · cambia con el segmentador del paso 3</div><div id="g-kpis" class="kpis"></div></div>
+      </article>
+
+      <!-- PASO 3 -->
+      <article id="paso-3" class="panel paso">
+        <header class="paso-cab"><span class="paso-num">3</span>
+          <div><h2>Gráficos visuales y segmentador (slicer)</h2>
+            <p class="muted">Gráfico de barras por región + filtro por Estado de Cuenta</p></div>
+        </header>
+
+        <p>El <mark>gráfico de barras</mark> sirve para comparar magnitudes entre categorías (aquí, regiones).
+          El <mark>segmentador de datos</mark> (<i>slicer</i>) es un panel de botones que filtra a la vez todas las tablas dinámicas y gráficos conectados.</p>
+
+        <h3>Gráfico de barras comparativo por región</h3>
+        <ol>
+          <li>Haz clic dentro de la <b>tabla dinámica 2</b> (región/comuna).</li>
+          <li><span class="menu">Analizar tabla dinámica</span> › <span class="menu">Gráfico dinámico</span> › <mark>Barra agrupada</mark>. Usa un <mark>gráfico dinámico</mark>, no uno normal: así responde al segmentador.</li>
+          <li>Para ver solo regiones, contrae las comunas: clic derecho en una región › <span class="menu">Expandir o contraer</span> › <span class="menu">Contraer todo el campo</span>.</li>
+          <li>Ordena de mayor a menor: clic derecho en el monto › <span class="menu">Ordenar</span> › <span class="menu">De mayor a menor</span>.</li>
+          <li>Corta el gráfico (<kbd>Ctrl</kbd> + <kbd>X</kbd>) y pégalo en <code>Dashboard_Ejecutivo</code>, debajo de las tarjetas.</li>
+        </ol>
+
+        <h3>Segmentador por Estado de Cuenta</h3>
+        <ol>
+          <li>Haz clic en una tabla dinámica › <span class="menu">Analizar tabla dinámica</span> › <span class="menu">Insertar segmentación de datos</span> › marca <mark>Estado_Cuenta</mark>.</li>
+          <li>Clic derecho en el segmentador › <span class="menu">Conexiones de informe</span> › marca <mark>todas las tablas dinámicas</mark>, para que el filtro afecte a todo el cuadro de mando.</li>
+          <li>Muévelo a <code>Dashboard_Ejecutivo</code>. Con <kbd>Ctrl</kbd> + clic se pueden elegir varios estados a la vez.</li>
+        </ol>
+        <div class="tip"><b>Importante:</b> las fórmulas <code>SUMA</code>/<code>CONTAR.SI</code> del paso 2 leen la hoja completa y <b>no</b> responden al segmentador. Para que las tarjetas también se filtren,
+          calcúlalas desde una tabla dinámica conectada usando <code>=IMPORTARDATOSDINAMICOS("Suma de Monto_Facturado_CLP";Tablas_Dinamicas!$F$3)</code>,
+          o arma el cuadro de mando en Looker Studio, donde los controles filtran todo automáticamente.</div>
+        <div class="tip"><b>En Google Sheets:</b> <span class="menu">Datos</span> › <span class="menu">Añadir un control de filtro</span>. <b>En Looker Studio:</b> <span class="menu">Añadir un control</span> › <mark>Lista desplegable</mark>, con dimensión de control <code>Estado_Cuenta</code>.</div>
+
+        <div class="resultado">
+          <div class="resultado-titulo">Resultado de ejemplo · prueba el segmentador</div>
+          <div id="g-slicer" class="slicer"></div>
+          <div id="g-chart" class="barras"></div>
+        </div>
+      </article>
+
+      <!-- PASO 4 -->
+      <article id="paso-4" class="panel paso">
+        <header class="paso-cab"><span class="paso-num">4</span>
+          <div><h2>Cruce de datos de sucursal y cálculo del total</h2>
+            <p class="muted">Hoja <code>2.10_A3_Ventas</code> + maestros de Sucursales y Productos</p></div>
+        </header>
+
+        <p>La hoja de ventas solo trae <mark>códigos</mark> (<code>ID_Sucursal</code>, <code>ID_Producto</code>). Para enriquecerla se hace un
+          <mark>cruce</mark> (lookup): buscar el código en la tabla maestra y traer la columna que necesitamos.
+          Es lo mismo que en el modelo de datos de esta web hacen las claves foráneas.</p>
+
+        <h3>Preparación</h3>
+        <p>En <code>2.10_A3_Ventas</code> las columnas H a J ya tienen pruebas auxiliares. Selecciona las columnas <b>G:I</b> › clic derecho › <span class="menu">Insertar</span>, para crear 3 columnas vacías justo después de <code>Cantidad</code>, y titúlalas
+          <code>Zona_Comercial</code>, <code>Precio_Unitario_CLP</code> y <code>Total_Facturado_CLP</code>.</p>
+
+        <h3>Fórmulas (fila 2)</h3>
+        <table class="tabla-formulas">
+          <thead><tr><th>Columna</th><th>Fórmula</th><th>Explicación</th></tr></thead>
+          <tbody>
+            <tr><td><mark>G · Zona_Comercial</mark></td>
+              <td><code>=BUSCARX(E2;'2.10_A3_Sucursales'!$A$2:$A$16;'2.10_A3_Sucursales'!$E$2:$E$16;"Sin sucursal")</code></td>
+              <td>Busca el <b>ID_Sucursal</b> (E2) en la columna A del maestro y devuelve la columna E (Zona_Comercial). El último argumento es el texto si no lo encuentra.</td></tr>
+            <tr><td><mark>H · Precio_Unitario_CLP</mark></td>
+              <td><code>=BUSCARX(D2;'2.10_Productos'!$A$2:$A$26;'2.10_Productos'!$D$2:$D$26;0)</code></td>
+              <td>Trae el precio del <b>ID_Producto</b> (D2) desde el maestro de productos.</td></tr>
+            <tr><td><mark>I · Total_Facturado_CLP</mark></td>
+              <td><code>=F2*H2</code></td>
+              <td><b>Cantidad × Precio Unitario</b>.</td></tr>
+          </tbody>
+        </table>
+        <ol>
+          <li>Los signos <mark>$</mark> fijan el rango del maestro (<mark>referencia absoluta</mark>), para que no se desplace al copiar la fórmula hacia abajo. Se agregan con <kbd>F4</kbd>.</li>
+          <li>Selecciona G2:I2 y haz <mark>doble clic en el cuadro de relleno</mark> (esquina inferior derecha) para copiar las fórmulas hasta la última venta.</li>
+          <li>Si tu Excel no tiene <code>BUSCARX</code>, usa <code>=BUSCARV(E2;'2.10_A3_Sucursales'!$A:$E;5;FALSO)</code>: el <b>5</b> es el número de columna a devolver y <b>FALSO</b> exige coincidencia exacta.</li>
+          <li><mark>Valida el cruce</mark>: hay ventas con <code>PROD-999</code> (producto inexistente), que quedarán con precio 0. Fíltralas y repórtalas. Esta web las separa en <code>ventas_rechazadas</code>.</li>
+        </ol>
+        <div class="resultado"><div class="resultado-titulo">Resultado de ejemplo · primeras ventas</div><div id="g-cruce"></div></div>
+        <div class="resultado"><div class="resultado-titulo">Bonus · total facturado por zona comercial (tabla dinámica sobre las columnas nuevas)</div><div id="g-zonas"></div></div>
+      </article>
+
+      <div class="panel">
+        <h2>Equivalencias de funciones</h2>
+        <p class="muted">Excel en español usa <b>;</b> como separador. En inglés y en Google Sheets (configuración EE. UU.) se usa <b>,</b>.</p>
+        <table class="tabla-formulas">
+          <thead><tr><th>Excel (español)</th><th>Excel (inglés) / Google Sheets</th><th>Uso en esta guía</th></tr></thead>
+          <tbody>
+            <tr><td><code>SUMA</code></td><td><code>SUM</code></td><td>Ingresos totales</td></tr>
+            <tr><td><code>PROMEDIO</code></td><td><code>AVERAGE</code></td><td>Ticket promedio, morosidad promedio</td></tr>
+            <tr><td><code>CONTARA</code></td><td><code>COUNTA</code></td><td>Número de clientes</td></tr>
+            <tr><td><code>CONTAR.SI</code></td><td><code>COUNTIF</code></td><td>Clientes en morosidad crítica</td></tr>
+            <tr><td><code>BUSCARX</code> / <code>BUSCARV</code></td><td><code>XLOOKUP</code> / <code>VLOOKUP</code></td><td>Cruce con sucursales y productos</td></tr>
+            <tr><td><code>IMPORTARDATOSDINAMICOS</code></td><td><code>GETPIVOTDATA</code></td><td>KPIs que responden al segmentador</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </main>
