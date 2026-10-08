@@ -15,6 +15,7 @@
         <p id="fuente" class="muted">Cargando…</p>
       </div>
     </div>
+    <div id="selector-fuente" class="selector-fuente"></div>
     <nav class="tabs">
       <button data-vista="resumen" class="active">Resumen</button>
       <button data-vista="tablas">Tablas</button>
@@ -27,6 +28,7 @@
   <main>
     <section id="vista-resumen" class="vista active">
       <div id="kpis" class="kpis"></div>
+      <div id="comparacion" class="panel" hidden></div>
       <div id="tarjetas" class="tarjetas"></div>
     </section>
 
@@ -84,7 +86,8 @@
       <div class="panel">
         <h2>Criterios de normalización</h2>
         <ul class="criterios">
-          <li><b>Fuente única por entidad:</b> la cartera se toma de <code>Dataset_limpio_A1</code> (957 clientes) y el producto de <code>Dataset_limpio_A2</code>. Se descartan tablas dinámicas, consultas y columnas con fórmulas.</li>
+          <li><b>Mismo proceso para dos fuentes:</b> el ETL se ejecuta sobre el <b>Excel trabajado</b> (<code>Dataset_limpio_A1</code> y hojas 2.10) y sobre los <b>CSV originales</b> (<code>dataoriginal</code>). En ambos casos el producto financiero se asocia desde <code>Dataset_limpio_A2</code>, porque los originales no traen esa columna. Del Excel se descartan tablas dinámicas, consultas y columnas con fórmulas.</li>
+          <li><b>Datos de origen visibles:</b> en <i>Tablas › Datos de origen</i> se ve cada fuente sin limpiar. Los espacios sobrantes se marcan en rojo con <span class="espacio">·</span>.</li>
           <li><b>Geografía compartida:</b> región, ciudad y comuna se repetían en cada fila; se separan en <code>regiones → ciudades → comunas</code> y ambos dominios referencian <code>id_comuna</code>.</li>
           <li><b>Catálogos:</b> estado de cuenta, producto financiero, segmento, categoría y zona comercial pasan a tablas propias para evitar variantes de escritura.</li>
           <li><b>Formatos:</b> RUT como <code>12.345.678-9</code>, nombres en formato nombre propio, emails en minúsculas sin tildes, fechas ISO <code>AAAA-MM-DD</code>, montos como enteros en CLP.</li>
@@ -101,6 +104,10 @@
         <p>Esta guía explica cómo resolver cada paso de la actividad en <b>Excel</b> (con nombres de funciones en español),
           con la equivalencia en <b>Google Sheets</b> y <b>Looker Studio</b>. Debajo de cada paso hay un
           <mark>resultado de ejemplo</mark> calculado con los datos reales, para que compares tu resultado.</p>
+        <div class="tip">Los resultados de ejemplo están calculados con la fuente <mark class="fuente-activa"></mark>.
+          Usa el selector <b>Fuente de datos</b> de arriba para alternar entre el <b>Excel trabajado</b> y los <b>CSV originales</b>
+          y ver cómo cambia el resultado del mismo proceso. Los clientes sin producto en <code>Dataset_limpio_A2</code> aparecen como
+          <i>(Sin producto)</i> en la tabla dinámica 1.</div>
         <p>Las rutas de menú se muestran así: <span class="menu">Insertar</span> › <span class="menu">Tabla dinámica</span>.
           Las <mark>palabras destacadas</mark> son los conceptos o campos clave de cada paso.</p>
         <ol class="indice">

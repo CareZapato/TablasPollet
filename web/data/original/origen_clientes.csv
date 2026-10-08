@@ -1,0 +1,101 @@
+﻿ID_Cliente,RUT_Cliente,Nombre_Cliente,Segmento,Comuna,Ciudad,Region
+CLI-001,18.768.710-6,Catalina López Espinoza,Persona,Puerto Montt,Puerto Montt,Región de Los Lagos
+CLI-002,22.115.701-8,Claudio Silva Muñoz,Persona,Valparaíso,Valparaíso,Región de Valparaíso
+CLI-003,13.069.307-8,Valentina Valenzuela Morales,VIP,Concepción,Concepción,Región del Biobío
+CLI-004,20.062.876-7,Rodrigo Espinoza Soto,Persona,Puerto Montt,Puerto Montt,Región de Los Lagos
+CLI-005,18.001.798-K,Camila López Muñoz,Pyme,Valparaíso,Valparaíso,Región de Valparaíso
+CLI-006,13.692.229-3,Hernán Díaz Valenzuela,Persona,Talcahuano,Concepción,Región del Biobío
+CLI-007,11.234.208-0,Carolina Valenzuela López,Pyme,Valparaíso,Valparaíso,Región de Valparaíso
+CLI-008,17.229.320-4,Matías Morales Sepúlveda,Corporativo,Concepción,Concepción,Región del Biobío
+CLI-009,20.777.271-5,Andrea Muñoz Contreras,Corporativo,Viña del Mar,Valparaíso,Región de Valparaíso
+CLI-010,16.604.616-4,Felipe Pérez Espinoza,VIP,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-011,14.834.321-1,Paula Espinoza Silva,VIP,Valparaíso,Valparaíso,Región de Valparaíso
+CLI-012,21.199.672-1,Felipe Valenzuela Silva,Corporativo,Las Condes,Santiago,Región Metropolitana
+CLI-013,12.717.228-6,Valentina Fuentes Tapia,VIP,Las Condes,Santiago,Región Metropolitana
+CLI-014,18.950.990-3,Esteban Valenzuela Rojas,VIP,Talcahuano,Concepción,Región del Biobío
+CLI-015,20.716.099-1,Sofia López Tapia,Pyme,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-016,17.207.585-8,Ignacio Pérez Morales,Corporativo,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-017,22.019.564-0,Catalina Rodríguez Morales,VIP,Viña del Mar,Valparaíso,Región de Valparaíso
+CLI-018,11.593.542-K,Esteban González Pérez,Corporativo,Concepción,Concepción,Región del Biobío
+CLI-019,17.602.585-8,Andrea Soto Valenzuela,Corporativo,Ñuñoa,Santiago,Región Metropolitana
+CLI-020,16.422.594-5,Javier Contreras Sepúlveda,Corporativo,Puerto Montt,Puerto Montt,Región de Los Lagos
+CLI-021,12.134.031-5,Camila Díaz Díaz,VIP,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-022,15.821.138-1,Tomas González Rojas,Persona,La Serena,La Serena,Región de Coquimbo
+CLI-023,15.415.608-3,Andrea Fuentes Silva,Pyme,Santiago Centro,Santiago,Región Metropolitana
+CLI-024,14.443.020-6,Cristián Tapia Rodríguez,Pyme,La Serena,La Serena,Región de Coquimbo
+CLI-025,18.976.533-7,Loreto Espinoza Vergara,Corporativo,Las Condes,Santiago,Región Metropolitana
+CLI-026,22.267.456-4,Rodrigo Fuentes Valenzuela,Persona,Ñuñoa,Santiago,Región Metropolitana
+CLI-027,22.051.986-8,Catalina Rodríguez Silva,Persona,La Serena,La Serena,Región de Coquimbo
+CLI-028,19.679.909-5,Mauricio Morales Sepúlveda,Persona,Maipú,Santiago,Región Metropolitana
+CLI-029,18.227.719-6,Daniela Díaz Vergara,VIP,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-030,13.537.379-3,Gonzalo Araya Sepúlveda,Persona,Maipú,Santiago,Región Metropolitana
+CLI-031,12.315.081-K,Francisca Rodríguez Soto,Corporativo,Concepción,Concepción,Región del Biobío
+CLI-032,21.898.522-4,Tomas Pérez López,VIP,Valparaíso,Valparaíso,Región de Valparaíso
+CLI-033,18.633.459-7,Loreto Rodríguez Soto,Persona,Temuco,Temuco,Región de la Araucanía
+CLI-034,12.270.906-5,Sebastián Valenzuela Rodríguez,Corporativo,Las Condes,Santiago,Región Metropolitana
+CLI-035,19.347.015-2,Macarena Sepúlveda Rojas,Pyme,Talcahuano,Concepción,Región del Biobío
+CLI-036,13.426.529-4,Diego Valenzuela Rodríguez,VIP,Ñuñoa,Santiago,Región Metropolitana
+CLI-037,13.019.071-9,Daniela Muñoz Vergara,VIP,Santiago Centro,Santiago,Región Metropolitana
+CLI-038,22.494.028-K,Claudio Rodríguez Vergara,VIP,La Serena,La Serena,Región de Coquimbo
+CLI-039,14.446.495-0,Valentina Fuentes Díaz,VIP,Temuco,Temuco,Región de la Araucanía
+CLI-040,12.712.921-1,Claudio González Rojas,Corporativo,Talcahuano,Concepción,Región del Biobío
+CLI-041,21.898.169-5,Beatriz Contreras Contreras,Pyme,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-042,11.435.581-8,Tomas Soto Fuentes,VIP,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-043,20.155.011-0,Paula Vergara Fuentes,Corporativo,La Serena,La Serena,Región de Coquimbo
+CLI-044,18.143.110-8,Felipe Fuentes Fuentes,Pyme,Temuco,Temuco,Región de la Araucanía
+CLI-045,21.835.466-K,Andrea Fuentes Sepúlveda,Corporativo,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-046,19.115.096-5,Ignacio Rodríguez Contreras,Pyme,Providencia,Santiago,Región Metropolitana
+CLI-047,16.624.859-K,Loreto Soto Rodríguez,VIP,Santiago Centro,Santiago,Región Metropolitana
+CLI-048,22.137.696-8,Esteban Rodríguez Pérez,VIP,La Serena,La Serena,Región de Coquimbo
+CLI-049,11.032.719-6,Javiera Araya Tapia,Pyme,Providencia,Santiago,Región Metropolitana
+CLI-050,22.324.972-4,Mauricio Rodríguez Muñoz,Persona,Temuco,Temuco,Región de la Araucanía
+CLI-051,19.570.350-9,Loreto Silva Pérez,Pyme,Concepción,Concepción,Región del Biobío
+CLI-052,11.603.747-1,Mauricio Vergara López,Corporativo,Concepción,Concepción,Región del Biobío
+CLI-053,16.319.687-3,Camila Fuentes Rodríguez,Corporativo,Concepción,Concepción,Región del Biobío
+CLI-054,12.477.709-5,Sebastián Vergara Muñoz,Persona,Las Condes,Santiago,Región Metropolitana
+CLI-055,12.012.506-5,Constanza Araya Rojas,Corporativo,Concepción,Concepción,Región del Biobío
+CLI-056,18.908.808-8,Hernán Silva González,Corporativo,Temuco,Temuco,Región de la Araucanía
+CLI-057,18.122.286-1,Paula Tapia Morales,Persona,Santiago Centro,Santiago,Región Metropolitana
+CLI-058,17.397.080-1,Javier Sepúlveda Silva,Corporativo,Providencia,Santiago,Región Metropolitana
+CLI-059,12.638.966-K,Carolina Díaz Rojas,VIP,La Serena,La Serena,Región de Coquimbo
+CLI-060,12.987.729-4,Rodrigo Rodríguez Valenzuela,VIP,Temuco,Temuco,Región de la Araucanía
+CLI-061,16.896.834-9,Francisca Vergara Contreras,VIP,Valparaíso,Valparaíso,Región de Valparaíso
+CLI-062,11.263.985-K,Felipe Díaz Espinoza,Persona,La Serena,La Serena,Región de Coquimbo
+CLI-063,15.500.830-8,Francisca Araya Araya,VIP,Ñuñoa,Santiago,Región Metropolitana
+CLI-064,15.433.099-K,Felipe Araya Silva,Pyme,La Serena,La Serena,Región de Coquimbo
+CLI-065,18.077.052-K,Paula Fuentes Fuentes,VIP,La Serena,La Serena,Región de Coquimbo
+CLI-066,11.875.267-5,Ignacio Fuentes Vergara,VIP,Temuco,Temuco,Región de la Araucanía
+CLI-067,12.465.092-2,Beatriz Díaz Morales,Corporativo,Santiago Centro,Santiago,Región Metropolitana
+CLI-068,14.245.954-1,Sebastián Vergara Muñoz,Pyme,Talcahuano,Concepción,Región del Biobío
+CLI-069,16.656.991-8,Andrea Soto Sepúlveda,Corporativo,Concepción,Concepción,Región del Biobío
+CLI-070,21.246.850-4,Matías Espinoza Fuentes,Persona,Temuco,Temuco,Región de la Araucanía
+CLI-071,16.921.669-4,Catalina Rodríguez Silva,Corporativo,Puerto Montt,Puerto Montt,Región de Los Lagos
+CLI-072,13.727.376-0,Felipe Sepúlveda Rodríguez,Pyme,Viña del Mar,Valparaíso,Región de Valparaíso
+CLI-073,20.658.979-9,Constanza Contreras Muñoz,Corporativo,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-074,22.335.636-6,Rodrigo Vergara Pérez,Corporativo,Temuco,Temuco,Región de la Araucanía
+CLI-075,20.639.344-2,Paula Valenzuela Soto,Persona,Santiago Centro,Santiago,Región Metropolitana
+CLI-076,21.556.461-1,Hernán Araya Valenzuela,Pyme,Temuco,Temuco,Región de la Araucanía
+CLI-077,11.262.209-9,Daniela Soto Díaz,VIP,Ñuñoa,Santiago,Región Metropolitana
+CLI-078,17.977.549-1,Esteban Contreras Espinoza,VIP,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-079,17.073.786-K,Paula Morales Valenzuela,VIP,Providencia,Santiago,Región Metropolitana
+CLI-080,20.332.192-4,Mauricio Araya López,Pyme,Viña del Mar,Valparaíso,Región de Valparaíso
+CLI-081,15.390.407-3,Daniela Morales Espinoza,Persona,Ñuñoa,Santiago,Región Metropolitana
+CLI-082,21.737.982-9,Cristián Fuentes Muñoz,Persona,Maipú,Santiago,Región Metropolitana
+CLI-083,21.551.807-6,Catalina Rojas Contreras,Pyme,Ñuñoa,Santiago,Región Metropolitana
+CLI-084,17.344.146-4,Hernán Pérez Pérez,VIP,Providencia,Santiago,Región Metropolitana
+CLI-085,17.386.581-0,Javiera González Tapia,Persona,Temuco,Temuco,Región de la Araucanía
+CLI-086,12.734.181-1,Esteban Espinoza Soto,Corporativo,Puerto Montt,Puerto Montt,Región de Los Lagos
+CLI-087,16.551.682-K,Camila Morales Sepúlveda,Pyme,Ñuñoa,Santiago,Región Metropolitana
+CLI-088,15.723.364-4,Sebastián Morales Contreras,Persona,Ñuñoa,Santiago,Región Metropolitana
+CLI-089,20.569.624-6,Daniela Muñoz Valenzuela,Pyme,Valparaíso,Valparaíso,Región de Valparaíso
+CLI-090,16.313.485-0,Rodrigo González Soto,Persona,Providencia,Santiago,Región Metropolitana
+CLI-091,14.219.540-7,Fernanda Fuentes Araya,VIP,Santiago Centro,Santiago,Región Metropolitana
+CLI-092,15.970.714-7,Esteban Fuentes Soto,Persona,Puerto Montt,Puerto Montt,Región de Los Lagos
+CLI-093,12.933.786-K,Sofia Sepúlveda Pérez,Persona,Santiago Centro,Santiago,Región Metropolitana
+CLI-094,17.966.725-5,Mauricio Rodríguez López,Corporativo,Antofagasta,Antofagasta,Región de Antofagasta
+CLI-095,14.888.829-7,Javiera Tapia Tapia,VIP,Concepción,Concepción,Región del Biobío
+CLI-096,17.219.043-9,Diego Contreras Contreras,VIP,Puerto Montt,Puerto Montt,Región de Los Lagos
+CLI-097,12.968.007-6,Camila Contreras Valenzuela,Pyme,Las Condes,Santiago,Región Metropolitana
+CLI-098,11.739.071-3,Diego Soto Morales,VIP,Concepción,Concepción,Región del Biobío
+CLI-099,11.256.981-1,Francisca Soto Valenzuela,Corporativo,Talcahuano,Concepción,Región del Biobío
+CLI-100,19.042.900-K,Esteban Araya Valenzuela,VIP,La Serena,La Serena,Región de Coquimbo

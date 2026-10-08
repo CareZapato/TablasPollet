@@ -1,0 +1,16 @@
+﻿id_sucursal,nombre,id_comuna,id_zona
+SUC-01,Sucursal Las Condes,COM-05,ZON-07
+SUC-02,Sucursal Providencia,COM-07,ZON-07
+SUC-03,Sucursal Santiago Centro,COM-10,ZON-02
+SUC-04,Sucursal Viña del Mar,COM-14,ZON-04
+SUC-05,Sucursal Concepción Centro,COM-02,ZON-09
+SUC-06,Sucursal Antofagasta Costa,COM-01,ZON-05
+SUC-07,Sucursal Temuco,COM-12,ZON-09
+SUC-08,Sucursal Puerto Montt,COM-08,ZON-01
+SUC-09,Sucursal La Serena,COM-04,ZON-05
+SUC-10,Sucursal Ñuñoa,COM-15,ZON-07
+SUC-11,Sucursal Maipú,COM-06,ZON-08
+SUC-12,Sucursal Talcahuano,COM-11,ZON-09
+SUC-13,Sucursal Valparaíso Puerto,COM-13,ZON-04
+SUC-14,Sucursal Rancagua,COM-09,ZON-03
+SUC-15,Sucursal Iquique,COM-03,ZON-06

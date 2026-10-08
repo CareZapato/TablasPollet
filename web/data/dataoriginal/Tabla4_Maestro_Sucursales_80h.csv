@@ -1,0 +1,16 @@
+ID_Sucursal,Nombre_Sucursal,Comuna,Ciudad,Zona_Comercial
+SUC-01,Sucursal Las Condes,Las Condes,Santiago,Zona Oriente
+SUC-02,Sucursal Providencia,Providencia,Santiago,Zona Oriente
+SUC-03,Sucursal Santiago Centro,Santiago Centro,Santiago,Zona Centro
+SUC-04,Sucursal Viña del Mar,Viña del Mar,Valparaíso,Zona Costa Norte
+SUC-05,Sucursal Concepción Centro,Concepción,Concepción,Zona Sur
+SUC-06,Sucursal Antofagasta Costa,Antofagasta,Antofagasta,Zona Norte
+SUC-07,Sucursal Temuco,Temuco,Temuco,Zona Sur
+SUC-08,Sucursal Puerto Montt,Puerto Montt,Puerto Montt,Zona Austral
+SUC-09,Sucursal La Serena,La Serena,La Serena,Zona Norte
+SUC-10,Sucursal Ñuñoa,Ñuñoa,Santiago,Zona Oriente
+SUC-11,Sucursal Maipú,Maipú,Santiago,Zona Poniente
+SUC-12,Sucursal Talcahuano,Talcahuano,Concepción,Zona Sur
+SUC-13,Sucursal Valparaíso Puerto,Valparaíso,Valparaíso,Zona Costa Norte
+SUC-14,Sucursal Rancagua,Rancagua,Rancagua,Zona Centro Sur
+SUC-15,Sucursal Iquique,Iquique,Iquique,Zona Norte Extremo

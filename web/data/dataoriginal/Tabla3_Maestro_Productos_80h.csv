@@ -1,0 +1,26 @@
+ID_Producto,Nombre_Producto,Categoria,Precio_Unitario_CLP
+PROD-101,Licencia ERP Cloud Pro,Software,950000
+PROD-102,Licencia CRM Enterprise,Software,1350000
+PROD-103,Consultoría Migración Data 20h,Consultoría,1450000
+PROD-104,Auditoría Ciberseguridad Pentest,Seguridad,2800000
+PROD-105,Mantenimiento Servidores 24/7,Infraestructura,1100000
+PROD-106,Laptop Pro i7 32GB RAM,Hardware,1450000
+PROD-107,Monitor 32 Pulgadas 4K HDR,Hardware,490000
+PROD-108,Licencia Business Intelligence Pro,Software,980000
+PROD-109,Servicio Backup Automatizado Cloud,Seguridad,620000
+PROD-110,Firewall Corporativo 10Gbps,Seguridad,4200000
+PROD-111,Servidor Rack Enterprise 4U,Infraestructura,5900000
+PROD-112,Kit Ergónomico Teclado+Mouse,Hardware,85000
+PROD-113,Suite Ofimática Nube 100U,Software,1200000
+PROD-114,Capacitación IAGen Corporativa,Consultoría,1650000
+PROD-115,Storage NAS 32TB RAID,Hardware,2100000
+PROD-116,Switch PoE 48 Puertos,Infraestructura,1450000
+PROD-117,Docking Station USB-C Triple Display,Hardware,185000
+PROD-118,Antivirus Endpoint 100 Licencias,Seguridad,1150000
+PROD-119,Consultoría Arquitectura BI,Consultoría,2200000
+PROD-120,Router Industrial 5G,Infraestructura,890000
+PROD-121,Multifuncional Láser Color,Hardware,540000
+PROD-122,Firma Digital Avanzada Empresa,Software,350000
+PROD-123,Monitoreo SOC Ciberseguridad,Seguridad,3100000
+PROD-124,Disco SSD NVMe 4TB,Hardware,320000
+PROD-125,Configuración SD-WAN Redes,Consultoría,1250000

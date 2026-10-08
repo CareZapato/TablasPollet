@@ -1,0 +1,16 @@
+﻿id_comuna,nombre,id_ciudad
+COM-01,Antofagasta,CIU-01
+COM-02,Concepción,CIU-02
+COM-03,Iquique,CIU-03
+COM-04,La Serena,CIU-04
+COM-05,Las Condes,CIU-07
+COM-06,Maipú,CIU-07
+COM-07,Providencia,CIU-07
+COM-08,Puerto Montt,CIU-05
+COM-09,Rancagua,CIU-06
+COM-10,Santiago Centro,CIU-07
+COM-11,Talcahuano,CIU-02
+COM-12,Temuco,CIU-08
+COM-13,Valparaíso,CIU-09
+COM-14,Viña del Mar,CIU-09
+COM-15,Ñuñoa,CIU-07

@@ -1,6 +1,9 @@
 {
-  "generado": "2026-10-08T00:11:07",
-  "fuente": "Actividad 1 - Lavadero de datos.xlsx",
+  "id": "original",
+  "nombre": "CSV originales",
+  "descripcion": "Archivos originales antes de cualquier limpieza (carpeta dataoriginal).",
+  "fuente": "dataoriginal/*.csv",
+  "generado": "2026-10-08T01:07:07",
   "tablas": {
     "regiones": {
       "dominio": "Geografía",
@@ -123,7 +126,7 @@
     },
     "cartera_clientes": {
       "dominio": "Cartera financiera",
-      "descripcion": "Clientes de la cartera (hojas Dataset_limpio A1/A2).",
+      "descripcion": "Clientes de la cartera financiera.",
       "columnas": [
         {
           "nombre": "id_cliente",
@@ -182,7 +185,7 @@
           "fk": null
         }
       ],
-      "filas": 957
+      "filas": 1000
     },
     "cuentas": {
       "dominio": "Cartera financiera",
@@ -238,7 +241,7 @@
           "fk": null
         }
       ],
-      "filas": 957
+      "filas": 1000
     },
     "segmentos": {
       "dominio": "Comercial",
@@ -263,7 +266,7 @@
     },
     "clientes": {
       "dominio": "Comercial",
-      "descripcion": "Clientes del módulo de ventas (hoja 2.10 Clientes).",
+      "descripcion": "Clientes del módulo de ventas.",
       "columnas": [
         {
           "nombre": "id_cliente",
@@ -540,50 +543,335 @@
         }
       ],
       "filas": 4
+    },
+    "origen_cartera": {
+      "dominio": "Datos de origen",
+      "origen": true,
+      "descripcion": "Cartera financiera tal como viene en la fuente, antes del ETL.",
+      "columnas": [
+        {
+          "nombre": "ID_Cliente",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "RUT_Cliente",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Nombre_Completo",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Email_Contacto",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Comuna",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Ciudad",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Region",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Monto_Facturado_CLP",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Dias_Morosidad",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Estado_Cuenta",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Fecha_Registro",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 1000
+    },
+    "origen_clientes": {
+      "dominio": "Datos de origen",
+      "origen": true,
+      "descripcion": "Clientes comerciales tal como vienen en la fuente.",
+      "columnas": [
+        {
+          "nombre": "ID_Cliente",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "RUT_Cliente",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Nombre_Cliente",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Segmento",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Comuna",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Ciudad",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Region",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 100
+    },
+    "origen_productos": {
+      "dominio": "Datos de origen",
+      "origen": true,
+      "descripcion": "Productos tal como vienen en la fuente.",
+      "columnas": [
+        {
+          "nombre": "ID_Producto",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Nombre_Producto",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Categoria",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Precio_Unitario_CLP",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 25
+    },
+    "origen_sucursales": {
+      "dominio": "Datos de origen",
+      "origen": true,
+      "descripcion": "Sucursales tal como vienen en la fuente.",
+      "columnas": [
+        {
+          "nombre": "ID_Sucursal",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Nombre_Sucursal",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Comuna",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Ciudad",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Zona_Comercial",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 15
+    },
+    "origen_ventas": {
+      "dominio": "Datos de origen",
+      "origen": true,
+      "descripcion": "Ventas tal como vienen en la fuente.",
+      "columnas": [
+        {
+          "nombre": "ID_Transaccion",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Fecha_Venta",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "ID_Cliente",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "ID_Producto",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "ID_Sucursal",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        },
+        {
+          "nombre": "Cantidad",
+          "tipo": "texto",
+          "descripcion": "Valor sin limpiar",
+          "pk": false,
+          "fk": null
+        }
+      ],
+      "filas": 300
     }
   },
   "calidad": [
     {
       "tabla": "cartera_clientes",
+      "columna": "producto_financiero",
+      "problema": "La fuente original no trae la columna Producto",
+      "filas_afectadas": 1000,
+      "accion": "Se asocia desde Dataset_limpio_A2 por ID_Cliente"
+    },
+    {
+      "tabla": "cartera_clientes",
       "columna": "rut",
-      "problema": "RUT en formatos mixtos (con y sin puntos)",
-      "filas_afectadas": 241,
+      "problema": "RUT en formatos mixtos (con/sin puntos o con espacios)",
+      "filas_afectadas": 500,
       "accion": "Formato único 12.345.678-9"
     },
     {
       "tabla": "cartera_clientes",
       "columna": "rut",
       "problema": "Dígito verificador no coincide con el cálculo módulo 11",
-      "filas_afectadas": 867,
+      "filas_afectadas": 909,
       "accion": "Se conserva y se marca rut_dv_valido = False"
     },
     {
       "tabla": "cartera_clientes",
       "columna": "nombre",
-      "problema": "Nombres en MAYÚSCULAS / minúsculas / espacios",
-      "filas_afectadas": 405,
+      "problema": "Nombres en MAYÚSCULAS / minúsculas / con espacios sobrantes",
+      "filas_afectadas": 1000,
       "accion": "Nombre propio y TRIM"
     },
     {
       "tabla": "cartera_clientes",
       "columna": "email",
       "problema": "Emails con tildes o ñ (no válidos en la parte local)",
-      "filas_afectadas": 371,
+      "filas_afectadas": 385,
       "accion": "Se eliminan tildes y ñ -> n"
     },
     {
       "tabla": "cartera_clientes",
       "columna": "estado_cuenta",
       "problema": "Estados con mayúsculas inconsistentes (activo, EN REVISIÓN)",
-      "filas_afectadas": 376,
+      "filas_afectadas": 394,
       "accion": "Catálogo de 3 estados"
     },
     {
       "tabla": "cartera_clientes",
       "columna": "producto_financiero",
-      "problema": "Cliente presente en A1 pero ausente en A2 (sin producto)",
-      "filas_afectadas": 1,
-      "accion": "Se deja la FK vacía"
+      "problema": "Cliente sin producto asociado en Dataset_limpio_A2",
+      "filas_afectadas": 44,
+      "accion": "Se deja la FK vacía (\"Sin producto\")"
+    },
+    {
+      "tabla": "cartera_clientes",
+      "columna": "nombre",
+      "problema": "Nombres repetidos con RUT distinto (homónimos)",
+      "filas_afectadas": 86,
+      "accion": "Informativo, no son duplicados: se conservan"
     },
     {
       "tabla": "clientes",

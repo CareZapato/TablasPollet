@@ -1,0 +1,14 @@
+[
+  {
+    "id": "excel",
+    "nombre": "Excel trabajado",
+    "descripcion": "Hojas del Excel después de la limpieza manual (Dataset_limpio_A1/A2 y hojas 2.10).",
+    "carpeta": "excel"
+  },
+  {
+    "id": "original",
+    "nombre": "CSV originales",
+    "descripcion": "Archivos originales antes de cualquier limpieza (carpeta dataoriginal).",
+    "carpeta": "original"
+  }
+]

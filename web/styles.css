@@ -13,7 +13,23 @@
   --fin: #0f9b8e;
   --com: #2f6fed;
   --qa: #d64545;
+  --origen: #8a94a6;
 }
+
+.selector-fuente { display: flex; align-items: center; gap: 4px; background: var(--bg); padding: 4px; border-radius: 10px; }
+.selector-fuente .muted { margin: 0 8px 0 6px; font-size: 12px; }
+.selector-fuente button {
+  border: none; background: transparent; padding: 7px 12px; border-radius: 7px; font: inherit; cursor: pointer; color: var(--muted);
+}
+.selector-fuente button.active { background: #fff; color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(20, 30, 60, .15); }
+body[data-fuente="original"] .selector-fuente button.active { color: #b4560a; }
+body[data-fuente="original"] .logo { background: #e07a1f; }
+
+.tabla-comparacion th.activa, .tabla-comparacion td.activa { background: var(--primary-soft); }
+.dif-mas { color: #b4560a; }
+.dif-menos { color: var(--primary); }
+.nota-comparacion { background: #fff6e8; border-left: 4px solid #e07a1f; padding: 10px 14px; border-radius: 8px; margin: 14px 0 0; line-height: 1.6; }
+.espacio { background: #ffe1e1; color: var(--bad); border-radius: 3px; font-weight: 700; }
 
 * { box-sizing: border-box; }
 

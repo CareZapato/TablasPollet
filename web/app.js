@@ -5,10 +5,14 @@ const COLOR_DOMINIO = {
   "Cartera financiera": "var(--fin)",
   "Comercial": "var(--com)",
   "Control de calidad": "var(--qa)",
+  "Datos de origen": "var(--origen)",
 };
 const TIPO_MERMAID = { texto: "string", entero: "int", booleano: "bool", fecha: "date" };
 
+const fuentes = {};
+
 const estado = {
+  fuente: null,
   modelo: null,
   datos: {},
   tabla: null,
@@ -45,24 +49,38 @@ function parseCSV(texto) {
     .map((f) => Object.fromEntries(cabecera.map((h, i) => [h, f[i] ?? ""])));
 }
 
-async function cargar() {
-  const resp = await fetch(`${DATA_DIR}/modelo.json`);
-  if (!resp.ok) throw new Error(`No se pudo leer ${DATA_DIR}/modelo.json`);
-  estado.modelo = await resp.json();
-  await Promise.all(Object.keys(estado.modelo.tablas).map(async (nombre) => {
-    const r = await fetch(`${DATA_DIR}/${nombre}.csv`);
-    estado.datos[nombre] = parseCSV(await r.text());
-  }));
+async function leerJSON(ruta) {
+  const resp = await fetch(ruta);
+  if (!resp.ok) throw new Error(`No se pudo leer ${ruta}`);
+  return resp.json();
 }
 
-function tablasPorDominio() {
+async function cargar() {
+  const lista = await leerJSON(`${DATA_DIR}/fuentes.json`);
+  const cargadas = await Promise.all(lista.map(async (f) => {
+    const dir = `${DATA_DIR}/${f.carpeta}`;
+    const modelo = await leerJSON(`${dir}/modelo.json`);
+    const datos = {};
+    await Promise.all(Object.keys(modelo.tablas).map(async (nombre) => {
+      const r = await fetch(`${dir}/${nombre}.csv`);
+      datos[nombre] = parseCSV(await r.text());
+    }));
+    return { ...f, dir, modelo, datos };
+  }));
+  for (const f of cargadas) fuentes[f.id] = f;
+  return lista.map((f) => f.id);
+}
+
+function tablasPorDominio(incluirOrigen = true) {
   const grupos = {};
   for (const [nombre, meta] of Object.entries(estado.modelo.tablas)) {
+    if (meta.origen && !incluirOrigen) continue;
     (grupos[meta.dominio] ??= []).push(nombre);
   }
   return grupos;
 }
 
+const tablasModelo = () => Object.keys(estado.modelo.tablas).filter((t) => !meta(t).origen);
 const meta = (tabla) => estado.modelo.tablas[tabla];
 const colDef = (tabla, columna) => meta(tabla).columnas.find((c) => c.nombre === columna);
 
@@ -84,7 +102,9 @@ function renderResumen() {
   $("#kpis").innerHTML = kpis.map(([t, v]) =>
     `<div class="kpi"><div class="muted">${t}</div><div class="valor">${v}</div></div>`).join("");
 
-  $("#tarjetas").innerHTML = Object.entries(estado.modelo.tablas).map(([nombre, m]) => `
+  renderComparacion();
+
+  $("#tarjetas").innerHTML = Object.entries(estado.modelo.tablas).filter(([, m]) => !m.origen).map(([nombre, m]) => `
     <div class="tarjeta clickable" data-tabla="${nombre}" style="--dom:${COLOR_DOMINIO[m.dominio]}">
       <div class="cab"><h3>${nombre}</h3><span class="dominio-tag">${m.dominio}</span></div>
       <p class="muted">${m.descripcion}</p>
@@ -92,6 +112,70 @@ function renderResumen() {
     </div>`).join("");
   document.querySelectorAll("#tarjetas .tarjeta").forEach((el) =>
     el.addEventListener("click", () => abrirTabla(el.dataset.tabla)));
+}
+
+function metricas(f) {
+  const d = f.datos;
+  const total = d.cuentas.reduce((s, r) => s + Number(r.monto_facturado_clp || 0), 0);
+  const criticos = d.cuentas.filter((r) => Number(r.dias_morosidad) > 60).length;
+  return {
+    filasOrigen: d.origen_cartera.length,
+    clientes: d.cartera_clientes.length,
+    total,
+    ticket: d.cuentas.length ? total / d.cuentas.length : 0,
+    tasaCritica: d.cuentas.length ? criticos / d.cuentas.length : 0,
+    sinProducto: d.cuentas.filter((r) => !r.id_producto_financiero).length,
+    ventas: d.ventas.length,
+    montoVentas: d.ventas.reduce((s, r) => s + Number(r.monto_total_clp || 0), 0),
+    rechazadas: d.ventas_rechazadas.length,
+    correcciones: f.modelo.calidad.reduce((s, q) => s + q.filas_afectadas, 0),
+  };
+}
+
+function renderComparacion() {
+  const ids = Object.keys(fuentes);
+  if (ids.length < 2) { $("#comparacion").hidden = true; return; }
+  const m = Object.fromEntries(ids.map((id) => [id, metricas(fuentes[id])]));
+  const pct = new Intl.NumberFormat("es-CL", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const filas = [
+    ["Filas de cartera en la fuente", "filasOrigen", fmtNum],
+    ["Clientes de cartera tras el ETL", "clientes", fmtNum],
+    ["Monto facturado cartera", "total", fmtCLP],
+    ["Ticket promedio por cliente", "ticket", fmtCLP],
+    ["Tasa de morosidad crítica (> 60 días)", "tasaCritica", pct],
+    ["Clientes sin producto financiero", "sinProducto", fmtNum],
+    ["Ventas válidas", "ventas", fmtNum],
+    ["Monto de ventas válidas", "montoVentas", fmtCLP],
+    ["Ventas rechazadas", "rechazadas", fmtNum],
+    ["Valores corregidos o marcados por el ETL", "correcciones", fmtNum],
+  ];
+  const [a, b] = ids;
+  const diferencia = (k, fmt) => {
+    const dif = m[b][k] - m[a][k];
+    if (Math.abs(dif) < 1e-9) return `<span class="muted">igual</span>`;
+    const texto = fmt === pct ? `${(dif * 100).toFixed(1).replace(".", ",")} pp` : fmt.format(dif);
+    return `<b class="${dif > 0 ? "dif-mas" : "dif-menos"}">${dif > 0 ? "+" : ""}${texto}</b>`;
+  };
+
+  const idsA = new Set(fuentes[a].datos.cartera_clientes.map((r) => r.id_cliente));
+  const soloB = fuentes[b].datos.cartera_clientes.filter((r) => !idsA.has(r.id_cliente)).map((r) => r.id_cliente);
+  const nota = soloB.length
+    ? `<p class="nota-comparacion"><b>${fmtNum.format(soloB.length)} clientes</b> existen en <b>${fuentes[b].nombre}</b> pero no en
+        <b>${fuentes[a].nombre}</b> (${soloB[0]} … ${soloB.at(-1)}). En la fuente original ningún RUT está repetido:
+        esas filas no eran duplicados, sino las últimas del archivo, que se perdieron al filtrar "duplicados" en el Excel.</p>`
+    : "";
+
+  $("#comparacion").hidden = false;
+  $("#comparacion").innerHTML = `
+    <div class="panel-header"><div><h2>Comparación entre fuentes</h2>
+      <p class="muted">Mismo proceso ETL aplicado a cada fuente. Columna activa resaltada.</p></div></div>
+    <div class="tabla-wrap"><table class="tabla-guia tabla-comparacion">
+      <thead><tr><th>Indicador</th>${ids.map((id) => `<th class="${id === estado.fuente ? "activa" : ""}">${fuentes[id].nombre}</th>`).join("")}
+        <th>Diferencia (${fuentes[b].nombre} − ${fuentes[a].nombre})</th></tr></thead>
+      <tbody>${filas.map(([t, k, fmt]) => `<tr><td>${t}</td>
+        ${ids.map((id) => `<td class="num ${id === estado.fuente ? "activa" : ""}">${fmt.format(m[id][k])}</td>`).join("")}
+        <td class="num">${diferencia(k, fmt)}</td></tr>`).join("")}</tbody>
+    </table></div>${nota}`;
 }
 
 // ------------------------------------------------------------------ Tablas
@@ -131,10 +215,19 @@ function filasVisibles() {
   return filas;
 }
 
-const cacheNombres = {};
+let cacheNombres = {};
 function indiceNombres(tabla, columna) {
   return (cacheNombres[`${tabla}.${columna}`] ??= new Map(
     estado.datos[tabla].filter((f) => f.nombre).map((f) => [f[columna], f.nombre])));
+}
+
+const escapar = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+function celdaCruda(valor) {
+  if (valor === "") return `<td class="muted">—</td>`;
+  const [, ini, medio, fin] = valor.match(/^(\s*)(.*?)(\s*)$/s);
+  const marca = (s) => s ? `<span class="espacio" title="Espacios sobrantes">${"·".repeat(s.length)}</span>` : "";
+  return `<td>${marca(ini)}${escapar(medio)}${marca(fin)}</td>`;
 }
 
 function celda(col, valor) {
@@ -163,7 +256,8 @@ function renderTabla() {
   const m = meta(estado.tabla);
   $("#tabla-titulo").textContent = estado.tabla;
   $("#tabla-desc").textContent = `${m.dominio} · ${m.descripcion}`;
-  $("#descargar").href = `${DATA_DIR}/${estado.tabla}.csv`;
+  $("#descargar").href = `${fuentes[estado.fuente].dir}/${estado.tabla}.csv`;
+  $("#descargar").download = `${estado.fuente}_${estado.tabla}.csv`;
 
   const filtro = $("#filtro-activo");
   filtro.hidden = !estado.filtro;
@@ -186,7 +280,7 @@ function renderTabla() {
     return `<th data-col="${c.nombre}" title="${ayuda}">${llave}${c.nombre} ${flecha}</th>`;
   }).join("");
   const cuerpo = pagina.length
-    ? pagina.map((f) => `<tr>${m.columnas.map((c) => celda(c, f[c.nombre])).join("")}</tr>`).join("")
+    ? pagina.map((f) => `<tr>${m.columnas.map((c) => m.origen ? celdaCruda(f[c.nombre]) : celda(c, f[c.nombre])).join("")}</tr>`).join("")
     : `<tr><td colspan="${m.columnas.length}" class="muted">Sin resultados</td></tr>`;
   $("#tabla").innerHTML = `<thead><tr>${cab}</tr></thead><tbody>${cuerpo}</tbody>`;
 
@@ -228,7 +322,7 @@ function definicionMermaid(tablas) {
 }
 
 function tablasDelDominio(dominio) {
-  const todas = Object.keys(estado.modelo.tablas);
+  const todas = tablasModelo();
   if (dominio === "Todos") return todas;
   const set = new Set(todas.filter((t) => meta(t).dominio === dominio));
   const pendientes = [...set];
@@ -257,11 +351,12 @@ async function renderDiagrama() {
 }
 
 function renderModelo() {
-  const dominios = ["Todos", ...Object.keys(tablasPorDominio()).filter((d) => d !== "Geografía")];
-  $("#dominio-er").innerHTML = dominios.map((d) => `<option>${d}</option>`).join("");
+  const dominios = ["Todos", ...Object.keys(tablasPorDominio(false)).filter((d) => d !== "Geografía")];
+  const actual = $("#dominio-er").value;
+  $("#dominio-er").innerHTML = dominios.map((d) => `<option ${d === actual ? "selected" : ""}>${d}</option>`).join("");
   $("#dominio-er").onchange = renderDiagrama;
 
-  $("#diccionario").innerHTML = Object.entries(estado.modelo.tablas).map(([nombre, m]) => `
+  $("#diccionario").innerHTML = Object.entries(estado.modelo.tablas).filter(([, m]) => !m.origen).map(([nombre, m]) => `
     <div class="tarjeta" style="--dom:${COLOR_DOMINIO[m.dominio]}">
       <div class="cab"><h3>${nombre}</h3><span class="dominio-tag">${m.dominio}</span></div>
       <p class="muted">${m.descripcion}</p>
@@ -300,12 +395,11 @@ function prepararGuia() {
   const regiones = porId("regiones", "id_region");
   const estados = porId("estados_cuenta", "id_estado");
   const productos = porId("productos_financieros", "id_producto_financiero");
-  // Equivalente a Dataset_limpio_A2: solo cuentas con producto informado.
-  guia.base = d.cuentas.filter((c) => c.id_producto_financiero).map((c) => {
+  guia.base = d.cuentas.map((c) => {
     const comuna = comunas.get(clientes.get(c.id_cliente).id_comuna);
     const region = regiones.get(ciudades.get(comuna.id_ciudad).id_region);
     return {
-      producto: productos.get(c.id_producto_financiero).nombre,
+      producto: productos.get(c.id_producto_financiero)?.nombre ?? "(Sin producto)",
       estado: estados.get(c.id_estado).nombre,
       region: region.nombre,
       comuna: comuna.nombre,
@@ -414,11 +508,6 @@ function renderGuia() {
   $("#g-zonas").innerHTML = tablaHTML(["Zona_Comercial", "N° ventas", "Suma de Total_Facturado_CLP"],
     porZona.map(([z, vs]) => [z, fmtNum.format(vs.length), fmtCLP.format(suma(vs))]),
     ["Total general", fmtNum.format(d.ventas.length), fmtCLP.format(totalVentas)]);
-
-  document.querySelectorAll(".indice a").forEach((a) => a.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    document.querySelector(a.getAttribute("href")).scrollIntoView({ behavior: "smooth", block: "start" });
-  }));
 }
 
 // ------------------------------------------------------------------ Navegación
@@ -432,27 +521,56 @@ function mostrarVista(vista) {
   if (vista === "modelo" && !diagramaDibujado) { diagramaDibujado = true; renderDiagrama(); }
 }
 
+function usarFuente(id) {
+  const f = fuentes[id];
+  Object.assign(estado, { fuente: id, modelo: f.modelo, datos: f.datos });
+  cacheNombres = {};
+  localStorage.setItem("fuente", id);
+  document.body.dataset.fuente = id;
+
+  const generado = new Date(f.modelo.generado).toLocaleString("es-CL");
+  $("#fuente").textContent = `${f.descripcion} · ${f.modelo.fuente} · generado ${generado}`;
+  document.querySelectorAll("#selector-fuente button").forEach((b) => b.classList.toggle("active", b.dataset.fuente === id));
+  document.querySelectorAll(".fuente-activa").forEach((el) => { el.textContent = f.nombre; });
+
+  renderResumen();
+  renderModelo();
+  renderCalidad();
+  renderGuia();
+  if (estado.tabla) {
+    if (!estado.datos[estado.tabla]) estado.tabla = "cartera_clientes";
+    renderSidebar();
+    renderTabla();
+  }
+}
+
 async function iniciar() {
+  let ids;
   try {
-    await cargar();
+    ids = await cargar();
   } catch (e) {
     $("main").innerHTML = `<div class="error"><b>No se pudieron cargar los datos.</b><br>
       Abre la página mediante un servidor local, por ejemplo: <code>python -m http.server 8000 -d web</code>
       y luego visita <code>http://localhost:8000</code>.<br><small>${e.message}</small></div>`;
     return;
   }
-  const generado = new Date(estado.modelo.generado).toLocaleString("es-CL");
-  $("#fuente").textContent = `Fuente: ${estado.modelo.fuente} · generado ${generado}`;
+
+  $("#selector-fuente").innerHTML = `<span class="muted">Fuente de datos</span>` +
+    ids.map((id) => `<button data-fuente="${id}" title="${fuentes[id].descripcion}">${fuentes[id].nombre}</button>`).join("");
+  document.querySelectorAll("#selector-fuente button").forEach((b) =>
+    b.addEventListener("click", () => usarFuente(b.dataset.fuente)));
 
   document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.vista)));
   $("#buscar").addEventListener("input", (e) => { estado.busqueda = e.target.value; estado.pagina = 0; renderTabla(); });
   $("#pag-ant").addEventListener("click", () => { estado.pagina--; renderTabla(); });
   $("#pag-sig").addEventListener("click", () => { estado.pagina++; renderTabla(); });
+  document.querySelectorAll(".indice a").forEach((a) => a.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    document.querySelector(a.getAttribute("href")).scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
 
-  renderResumen();
-  renderModelo();
-  renderCalidad();
-  renderGuia();
+  const pedida = new URLSearchParams(location.search).get("fuente") ?? localStorage.getItem("fuente");
+  usarFuente(fuentes[pedida] ? pedida : ids[0]);
   const inicial = location.hash.slice(1);
   if (document.getElementById(`vista-${inicial}`)) mostrarVista(inicial);
 }

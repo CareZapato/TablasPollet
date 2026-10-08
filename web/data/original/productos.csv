@@ -1,0 +1,26 @@
+﻿id_producto,nombre,id_categoria,precio_unitario_clp
+PROD-101,Licencia ERP Cloud Pro,CAT-05,950000
+PROD-102,Licencia CRM Enterprise,CAT-05,1350000
+PROD-103,Consultoría Migración Data 20h,CAT-01,1450000
+PROD-104,Auditoría Ciberseguridad Pentest,CAT-04,2800000
+PROD-105,Mantenimiento Servidores 24/7,CAT-03,1100000
+PROD-106,Laptop Pro i7 32GB RAM,CAT-02,1450000
+PROD-107,Monitor 32 Pulgadas 4K HDR,CAT-02,490000
+PROD-108,Licencia Business Intelligence Pro,CAT-05,980000
+PROD-109,Servicio Backup Automatizado Cloud,CAT-04,620000
+PROD-110,Firewall Corporativo 10Gbps,CAT-04,4200000
+PROD-111,Servidor Rack Enterprise 4U,CAT-03,5900000
+PROD-112,Kit Ergónomico Teclado+Mouse,CAT-02,85000
+PROD-113,Suite Ofimática Nube 100U,CAT-05,1200000
+PROD-114,Capacitación IAGen Corporativa,CAT-01,1650000
+PROD-115,Storage NAS 32TB RAID,CAT-02,2100000
+PROD-116,Switch PoE 48 Puertos,CAT-03,1450000
+PROD-117,Docking Station USB-C Triple Display,CAT-02,185000
+PROD-118,Antivirus Endpoint 100 Licencias,CAT-04,1150000
+PROD-119,Consultoría Arquitectura BI,CAT-01,2200000
+PROD-120,Router Industrial 5G,CAT-03,890000
+PROD-121,Multifuncional Láser Color,CAT-02,540000
+PROD-122,Firma Digital Avanzada Empresa,CAT-05,350000
+PROD-123,Monitoreo SOC Ciberseguridad,CAT-04,3100000
+PROD-124,Disco SSD NVMe 4TB,CAT-02,320000
+PROD-125,Configuración SD-WAN Redes,CAT-01,1250000

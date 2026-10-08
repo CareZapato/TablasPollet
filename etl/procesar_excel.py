@@ -1,47 +1,71 @@
 """
-Proceso ETL: Excel "Actividad 1 - Lavadero de datos.xlsx" -> CSV normalizados.
+Proceso ETL: aplica la misma limpieza y normalización a dos fuentes de datos y las exporta a CSV.
 
-Fuentes utilizadas (solo columnas de datos crudos, se ignoran columnas de fórmulas auxiliares):
-  - "28.9 Dataset_limpio_A1"  : cartera de clientes financieros (base principal).
-  - "Dataset_limpio_A2"       : misma cartera + columna Producto (se toma solo el producto).
-  - "2.10 Clientes"           : clientes del módulo comercial.
-  - "2.10_Productos"          : catálogo de productos.
-  - "2.10_A3_Sucursales"      : sucursales.
-  - "2.10_A3_Ventas"          : transacciones de venta.
+Fuentes:
+  - excel    : "Actividad 1 - Lavadero de datos.xlsx" (datos ya trabajados a mano).
+                 "28.9 Dataset_limpio_A1"  cartera de clientes financieros.
+                 "Dataset_limpio_A2"       solo la columna Producto.
+                 "2.10 Clientes", "2.10_Productos", "2.10_A3_Sucursales", "2.10_A3_Ventas".
+  - original : CSV originales, antes de cualquier limpieza (web/data/dataoriginal).
+                 Dataset_1000_Clientes_*.csv, Tabla1_Ventas_*, Tabla2_*Clientes*, Tabla3_*Productos*,
+                 Tabla4_*Sucursales*. No trae Producto: se asocia desde Dataset_limpio_A2 por ID_Cliente.
 
-Hojas ignoradas: tablas dinámicas, "Hoja 10", "Consulta_Dinamica" (son vistas derivadas)
-y "Bitácora Higiene" (notas).
+Hojas ignoradas del Excel: tablas dinámicas, "Hoja 10", "Consulta_Dinamica" y "Bitácora Higiene".
+
+Salida: web/data/<fuente>/*.csv + modelo.json, y web/data/fuentes.json con el listado de fuentes.
 
 Uso:
-    python etl/procesar_excel.py [ruta_excel] [carpeta_salida]
+    python etl/procesar_excel.py
 """
 
 from __future__ import annotations
 
+import copy
 import json
 import re
-import sys
 import unicodedata
 import warnings
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 import pandas as pd
 
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 RAIZ = Path(__file__).resolve().parent.parent
-EXCEL_DEFECTO = RAIZ / "Actividad 1 - Lavadero de datos.xlsx"
-SALIDA_DEFECTO = RAIZ / "web" / "data"
+EXCEL = RAIZ / "Actividad 1 - Lavadero de datos.xlsx"
+CARPETA_ORIGINAL = RAIZ / "web" / "data" / "dataoriginal"
+SALIDA = RAIZ / "web" / "data"
 
-HOJA_A1 = "28.9 Dataset_limpio_A1"
-HOJA_A2 = "Dataset_limpio_A2"
-HOJA_CLIENTES = "2.10 Clientes"
-HOJA_PRODUCTOS = "2.10_Productos"
-HOJA_SUCURSALES = "2.10_A3_Sucursales"
-HOJA_VENTAS = "2.10_A3_Ventas"
+COLUMNAS_FUENTE = {
+    "cartera": ["ID_Cliente", "RUT_Cliente", "Nombre_Completo", "Email_Contacto", "Comuna", "Ciudad",
+                "Region", "Monto_Facturado_CLP", "Dias_Morosidad", "Estado_Cuenta", "Fecha_Registro"],
+    "producto_cartera": ["ID_Cliente", "Producto"],
+    "clientes": ["ID_Cliente", "RUT_Cliente", "Nombre_Cliente", "Segmento", "Comuna", "Ciudad", "Region"],
+    "productos": ["ID_Producto", "Nombre_Producto", "Categoria", "Precio_Unitario_CLP"],
+    "sucursales": ["ID_Sucursal", "Nombre_Sucursal", "Comuna", "Ciudad", "Zona_Comercial"],
+    "ventas": ["ID_Transaccion", "Fecha_Venta", "ID_Cliente", "ID_Producto", "ID_Sucursal", "Cantidad"],
+}
 
-# Regiones de ciudades que solo aparecen en Sucursales (el Excel no trae la región).
+HOJAS_EXCEL = {
+    "cartera": "28.9 Dataset_limpio_A1",
+    "producto_cartera": "Dataset_limpio_A2",
+    "clientes": "2.10 Clientes",
+    "productos": "2.10_Productos",
+    "sucursales": "2.10_A3_Sucursales",
+    "ventas": "2.10_A3_Ventas",
+}
+
+ARCHIVOS_ORIGINALES = {
+    "cartera": "Dataset_*Clientes*.csv",
+    "clientes": "Tabla2_*Clientes*.csv",
+    "productos": "Tabla3_*Productos*.csv",
+    "sucursales": "Tabla4_*Sucursales*.csv",
+    "ventas": "Tabla1_*Ventas*.csv",
+}
+
+# Regiones de ciudades que solo aparecen en Sucursales (las fuentes no traen la región).
 REGION_POR_CIUDAD_EXTRA = {
     "Rancagua": "Región del Libertador General Bernardo O'Higgins",
     "Iquique": "Región de Tarapacá",
@@ -68,7 +92,7 @@ def sin_tildes(texto: str) -> str:
 
 
 def limpiar_espacios(valor) -> str | None:
-    if pd.isna(valor):
+    if valor is None or pd.isna(valor):
         return None
     texto = re.sub(r"\s+", " ", str(valor)).strip()
     return texto or None
@@ -93,10 +117,11 @@ def digito_verificador(cuerpo: str) -> str:
 
 def normalizar_rut(valor) -> tuple[str | None, bool]:
     """Devuelve (RUT con formato 12.345.678-9, dígito verificador válido)."""
-    if pd.isna(valor):
+    texto = limpiar_espacios(valor)
+    if texto is None:
         return None, False
-    limpio = re.sub(r"[^0-9kK]", "", str(valor)).upper()
-    if len(limpio) < 2:
+    limpio = re.sub(r"[^0-9kK]", "", texto).upper()
+    if len(limpio) < 2 or not limpio[:-1].isdigit():
         return None, False
     cuerpo, dv = limpio[:-1], limpio[-1]
     formateado = f"{int(cuerpo):,}".replace(",", ".") + "-" + dv
@@ -120,14 +145,33 @@ def normalizar_estado(valor) -> str | None:
 
 
 def fecha_iso(valor) -> str | None:
-    if pd.isna(valor):
+    if isinstance(valor, (datetime, pd.Timestamp)):
+        return valor.strftime("%Y-%m-%d")
+    texto = limpiar_espacios(valor)
+    if texto is None:
         return None
-    return pd.to_datetime(valor, dayfirst=True).strftime("%Y-%m-%d")
+    fecha = pd.to_datetime(texto, errors="coerce", dayfirst=not re.match(r"\d{4}-", texto))
+    return None if pd.isna(fecha) else fecha.strftime("%Y-%m-%d")
 
 
-def nivel_riesgo(dias_morosidad: int, estado: str) -> str:
+def a_entero(serie: pd.Series) -> pd.Series:
+    return pd.to_numeric(serie.map(limpiar_espacios), errors="coerce").round().astype("Int64")
+
+
+def a_texto_crudo(valor) -> str:
+    """Representación de un valor de origen sin limpiarlo (solo legibilidad de fechas y números)."""
+    if valor is None or (not isinstance(valor, str) and pd.isna(valor)):
+        return ""
+    if isinstance(valor, (datetime, pd.Timestamp)):
+        return valor.strftime("%Y-%m-%d")
+    if isinstance(valor, float) and valor.is_integer():
+        return str(int(valor))
+    return str(valor)
+
+
+def nivel_riesgo(dias_morosidad, estado) -> str:
     """Misma regla de negocio que la fórmula IFS de la hoja Dataset_limpio_A2."""
-    if dias_morosidad is None or estado is None:
+    if pd.isna(dias_morosidad) or estado is None:
         return "Sin Dato"
     if dias_morosidad > 60 and estado == "Activo":
         return "Riesgo Alto"
@@ -137,14 +181,7 @@ def nivel_riesgo(dias_morosidad: int, estado: str) -> str:
 
 
 def contar_cambios(antes: pd.Series, despues: pd.Series) -> int:
-    return int((antes.astype("string").fillna("") != despues.astype("string").fillna("")).sum())
-
-
-def leer_hoja(excel: Path, hoja: str, columnas: list[str]) -> pd.DataFrame:
-    df = pd.read_excel(excel, sheet_name=hoja, dtype=object)
-    df.columns = [str(c).strip() for c in df.columns]
-    df = df[columnas].dropna(how="all").reset_index(drop=True)
-    return df
+    return int((antes.map(a_texto_crudo) != despues.astype("string").fillna("")).sum())
 
 
 def catalogo(valores: pd.Series, prefijo: str, col_id: str, col_nombre: str) -> pd.DataFrame:
@@ -160,14 +197,45 @@ def deduplicar(df: pd.DataFrame, claves: list[str], tabla: str) -> pd.DataFrame:
     return df[~duplicados].reset_index(drop=True)
 
 
+# ---------------------------------------------------------------- carga de fuentes
+
+def _seleccionar(df: pd.DataFrame, clave: str, origen: str) -> pd.DataFrame:
+    df.columns = [str(c).strip() for c in df.columns]
+    faltantes = set(COLUMNAS_FUENTE[clave]) - set(df.columns)
+    if faltantes:
+        raise ValueError(f"{origen}: faltan columnas {sorted(faltantes)}")
+    df = df[COLUMNAS_FUENTE[clave]]
+    vacias = df.map(lambda v: a_texto_crudo(v).strip() == "").all(axis=1)
+    return df[~vacias].reset_index(drop=True)
+
+
+def cargar_excel(excel: Path) -> dict[str, pd.DataFrame]:
+    return {clave: _seleccionar(pd.read_excel(excel, sheet_name=hoja, dtype=object), clave, hoja)
+            for clave, hoja in HOJAS_EXCEL.items()}
+
+
+def cargar_originales(carpeta: Path, excel: Path) -> dict[str, pd.DataFrame]:
+    datos = {}
+    for clave, patron in ARCHIVOS_ORIGINALES.items():
+        archivos = sorted(carpeta.glob(patron))
+        if not archivos:
+            raise FileNotFoundError(f"No se encontró {patron} en {carpeta}")
+        df = pd.read_csv(archivos[0], dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        datos[clave] = _seleccionar(df, clave, archivos[0].name)
+    datos["producto_cartera"] = _seleccionar(
+        pd.read_excel(excel, sheet_name=HOJAS_EXCEL["producto_cartera"], dtype=object), "producto_cartera",
+        HOJAS_EXCEL["producto_cartera"])
+    registrar("cartera_clientes", "producto_financiero",
+              "La fuente original no trae la columna Producto",
+              len(datos["cartera"]), "Se asocia desde Dataset_limpio_A2 por ID_Cliente")
+    return datos
+
+
 # ---------------------------------------------------------------- etapas del proceso
 
-def limpiar_cartera(excel: Path) -> pd.DataFrame:
+def limpiar_cartera(fuente: dict[str, pd.DataFrame]) -> pd.DataFrame:
     t = "cartera_clientes"
-    cols = ["ID_Cliente", "RUT_Cliente", "Nombre_Completo", "Email_Contacto", "Comuna", "Ciudad",
-            "Region", "Monto_Facturado_CLP", "Dias_Morosidad", "Estado_Cuenta", "Fecha_Registro"]
-    a1 = leer_hoja(excel, HOJA_A1, cols)
-    a2 = leer_hoja(excel, HOJA_A2, ["ID_Cliente", "Producto"])
+    a1 = fuente["cartera"]
 
     df = pd.DataFrame()
     df["id_cliente"] = a1["ID_Cliente"].map(limpiar_espacios).str.upper()
@@ -175,13 +243,13 @@ def limpiar_cartera(excel: Path) -> pd.DataFrame:
     rut = a1["RUT_Cliente"].map(normalizar_rut)
     df["rut"] = rut.str[0]
     df["rut_dv_valido"] = rut.str[1]
-    registrar(t, "rut", "RUT en formatos mixtos (con y sin puntos)",
+    registrar(t, "rut", "RUT en formatos mixtos (con/sin puntos o con espacios)",
               contar_cambios(a1["RUT_Cliente"], df["rut"]), "Formato único 12.345.678-9")
     registrar(t, "rut", "Dígito verificador no coincide con el cálculo módulo 11",
               (~df["rut_dv_valido"]).sum(), "Se conserva y se marca rut_dv_valido = False")
 
     df["nombre"] = a1["Nombre_Completo"].map(nombre_propio)
-    registrar(t, "nombre", "Nombres en MAYÚSCULAS / minúsculas / espacios",
+    registrar(t, "nombre", "Nombres en MAYÚSCULAS / minúsculas / con espacios sobrantes",
               contar_cambios(a1["Nombre_Completo"], df["nombre"]), "Nombre propio y TRIM")
 
     email = a1["Email_Contacto"].map(normalizar_email)
@@ -193,8 +261,8 @@ def limpiar_cartera(excel: Path) -> pd.DataFrame:
     df["comuna"] = a1["Comuna"].map(nombre_propio)
     df["ciudad"] = a1["Ciudad"].map(nombre_propio)
     df["region"] = a1["Region"].map(limpiar_espacios)
-    df["monto_facturado_clp"] = pd.to_numeric(a1["Monto_Facturado_CLP"], errors="coerce").round().astype("Int64")
-    df["dias_morosidad"] = pd.to_numeric(a1["Dias_Morosidad"], errors="coerce").astype("Int64")
+    df["monto_facturado_clp"] = a_entero(a1["Monto_Facturado_CLP"])
+    df["dias_morosidad"] = a_entero(a1["Dias_Morosidad"])
 
     df["estado_cuenta"] = a1["Estado_Cuenta"].map(normalizar_estado)
     registrar(t, "estado_cuenta", "Estados con mayúsculas inconsistentes (activo, EN REVISIÓN)",
@@ -202,22 +270,24 @@ def limpiar_cartera(excel: Path) -> pd.DataFrame:
 
     df["fecha_registro"] = a1["Fecha_Registro"].map(fecha_iso)
 
-    productos = a2.assign(ID_Cliente=a2["ID_Cliente"].map(limpiar_espacios).str.upper())
-    productos = productos.drop_duplicates("ID_Cliente").set_index("ID_Cliente")["Producto"].map(limpiar_espacios)
+    a2 = fuente["producto_cartera"]
+    productos = (a2.assign(ID_Cliente=a2["ID_Cliente"].map(limpiar_espacios).str.upper())
+                 .drop_duplicates("ID_Cliente").set_index("ID_Cliente")["Producto"].map(limpiar_espacios))
     df["producto_financiero"] = df["id_cliente"].map(productos)
-    registrar(t, "producto_financiero", "Cliente presente en A1 pero ausente en A2 (sin producto)",
-              df["producto_financiero"].isna().sum(), "Se deja la FK vacía")
+    registrar(t, "producto_financiero", "Cliente sin producto asociado en Dataset_limpio_A2",
+              df["producto_financiero"].isna().sum(), "Se deja la FK vacía (\"Sin producto\")")
 
     nulos = df[["id_cliente", "rut", "nombre"]].isna().any(axis=1)
     registrar(t, "id_cliente, rut, nombre", "Campos obligatorios vacíos", nulos.sum(), "Fila descartada")
     df = df[~nulos]
     df = deduplicar(df, ["rut"], t)
+    registrar(t, "nombre", "Nombres repetidos con RUT distinto (homónimos)",
+              df["nombre"].duplicated(keep=False).sum(), "Informativo, no son duplicados: se conservan")
     return df
 
 
-def limpiar_comercial(excel: Path) -> tuple[pd.DataFrame, ...]:
-    c = leer_hoja(excel, HOJA_CLIENTES,
-                  ["ID_Cliente", "RUT_Cliente", "Nombre_Cliente", "Segmento", "Comuna", "Ciudad", "Region"])
+def limpiar_comercial(fuente: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, ...]:
+    c = fuente["clientes"]
     clientes = pd.DataFrame()
     clientes["id_cliente"] = c["ID_Cliente"].map(limpiar_espacios).str.upper()
     rut = c["RUT_Cliente"].map(normalizar_rut)
@@ -226,22 +296,24 @@ def limpiar_comercial(excel: Path) -> tuple[pd.DataFrame, ...]:
     registrar("clientes", "rut", "Dígito verificador no coincide con el cálculo módulo 11",
               (~clientes["rut_dv_valido"]).sum(), "Se conserva y se marca rut_dv_valido = False")
     clientes["nombre"] = c["Nombre_Cliente"].map(nombre_propio)
+    registrar("clientes", "nombre", "Nombres en MAYÚSCULAS / minúsculas / con espacios sobrantes",
+              contar_cambios(c["Nombre_Cliente"], clientes["nombre"]), "Nombre propio y TRIM")
     clientes["segmento"] = c["Segmento"].map(limpiar_espacios)
     clientes["comuna"] = c["Comuna"].map(nombre_propio)
     clientes["ciudad"] = c["Ciudad"].map(nombre_propio)
     clientes["region"] = c["Region"].map(limpiar_espacios)
     clientes = deduplicar(clientes, ["id_cliente"], "clientes")
 
-    p = leer_hoja(excel, HOJA_PRODUCTOS, ["ID_Producto", "Nombre_Producto", "Categoria", "Precio_Unitario_CLP"])
+    p = fuente["productos"]
     productos = pd.DataFrame({
         "id_producto": p["ID_Producto"].map(limpiar_espacios).str.upper(),
         "nombre": p["Nombre_Producto"].map(limpiar_espacios),
         "categoria": p["Categoria"].map(nombre_propio),
-        "precio_unitario_clp": pd.to_numeric(p["Precio_Unitario_CLP"], errors="coerce").round().astype("Int64"),
+        "precio_unitario_clp": a_entero(p["Precio_Unitario_CLP"]),
     })
     productos = deduplicar(productos, ["id_producto"], "productos")
 
-    s = leer_hoja(excel, HOJA_SUCURSALES, ["ID_Sucursal", "Nombre_Sucursal", "Comuna", "Ciudad", "Zona_Comercial"])
+    s = fuente["sucursales"]
     sucursales = pd.DataFrame({
         "id_sucursal": s["ID_Sucursal"].map(limpiar_espacios).str.upper(),
         "nombre": s["Nombre_Sucursal"].map(limpiar_espacios),
@@ -251,22 +323,21 @@ def limpiar_comercial(excel: Path) -> tuple[pd.DataFrame, ...]:
     })
     sucursales = deduplicar(sucursales, ["id_sucursal"], "sucursales")
 
-    v = leer_hoja(excel, HOJA_VENTAS,
-                  ["ID_Transaccion", "Fecha_Venta", "ID_Cliente", "ID_Producto", "ID_Sucursal", "Cantidad"])
+    v = fuente["ventas"]
     ventas = pd.DataFrame({
         "id_transaccion": v["ID_Transaccion"].map(limpiar_espacios).str.upper(),
         "fecha_venta": v["Fecha_Venta"].map(fecha_iso),
         "id_cliente": v["ID_Cliente"].map(limpiar_espacios).str.upper(),
         "id_producto": v["ID_Producto"].map(limpiar_espacios).str.upper(),
         "id_sucursal": v["ID_Sucursal"].map(limpiar_espacios).str.upper(),
-        "cantidad": pd.to_numeric(v["Cantidad"], errors="coerce").astype("Int64"),
+        "cantidad": a_entero(v["Cantidad"]),
     })
     ventas = deduplicar(ventas, ["id_transaccion"], "ventas")
     return clientes, productos, sucursales, ventas
 
 
 def construir_geografia(*fuentes: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    geo = pd.concat([f[[c for c in ("comuna", "ciudad", "region") if c in f]] for f in fuentes], ignore_index=True)
+    geo = pd.concat([f.reindex(columns=["comuna", "ciudad", "region"]) for f in fuentes], ignore_index=True)
     region_por_ciudad = geo.dropna(subset=["region"]).drop_duplicates("ciudad").set_index("ciudad")["region"].to_dict()
     region_por_ciudad = {**REGION_POR_CIUDAD_EXTRA, **region_por_ciudad}
     sin_region = geo["region"].isna()
@@ -325,7 +396,7 @@ MODELO = {
     "productos_financieros": {"dominio": "Cartera financiera", "descripcion": "Productos financieros contratados.", "columnas": [
         col("id_producto_financiero", "texto", "Identificador del producto", pk=True),
         col("nombre", "texto", "Nombre del producto")]},
-    "cartera_clientes": {"dominio": "Cartera financiera", "descripcion": "Clientes de la cartera (hojas Dataset_limpio A1/A2).", "columnas": [
+    "cartera_clientes": {"dominio": "Cartera financiera", "descripcion": "Clientes de la cartera financiera.", "columnas": [
         col("id_cliente", "texto", "Identificador del cliente (CLI-0000)", pk=True),
         col("rut", "texto", "RUT normalizado 12.345.678-9"),
         col("rut_dv_valido", "booleano", "Dígito verificador correcto según módulo 11"),
@@ -346,7 +417,7 @@ MODELO = {
     "segmentos": {"dominio": "Comercial", "descripcion": "Segmentos de cliente.", "columnas": [
         col("id_segmento", "texto", "Identificador de segmento", pk=True),
         col("nombre", "texto", "VIP / Corporativo / Pyme / Persona")]},
-    "clientes": {"dominio": "Comercial", "descripcion": "Clientes del módulo de ventas (hoja 2.10 Clientes).", "columnas": [
+    "clientes": {"dominio": "Comercial", "descripcion": "Clientes del módulo de ventas.", "columnas": [
         col("id_cliente", "texto", "Identificador del cliente (CLI-000)", pk=True),
         col("rut", "texto", "RUT normalizado 12.345.678-9"),
         col("rut_dv_valido", "booleano", "Dígito verificador correcto según módulo 11"),
@@ -388,13 +459,20 @@ MODELO = {
         col("motivo", "texto", "Motivo del rechazo")]},
 }
 
+DESCRIPCION_ORIGEN = {
+    "cartera": "Cartera financiera tal como viene en la fuente, antes del ETL.",
+    "clientes": "Clientes comerciales tal como vienen en la fuente.",
+    "productos": "Productos tal como vienen en la fuente.",
+    "sucursales": "Sucursales tal como vienen en la fuente.",
+    "ventas": "Ventas tal como vienen en la fuente.",
+}
+
 
 # ---------------------------------------------------------------- orquestación
 
-def ejecutar(excel: Path, salida: Path) -> None:
-    print(f"Leyendo {excel.name} ...")
-    cartera = limpiar_cartera(excel)
-    clientes, productos, sucursales, ventas = limpiar_comercial(excel)
+def procesar(fuente: dict[str, pd.DataFrame]) -> tuple[dict[str, pd.DataFrame], dict]:
+    cartera = limpiar_cartera(fuente)
+    clientes, productos, sucursales, ventas = limpiar_comercial(fuente)
 
     regiones, ciudades, comunas = construir_geografia(cartera, clientes, sucursales)
     id_comuna = comunas.set_index("nombre")["id_comuna"]
@@ -455,34 +533,60 @@ def ejecutar(excel: Path, salida: Path) -> None:
         "productos": productos_out, "zonas_comerciales": zonas, "sucursales": sucursales_out,
         "ventas": ventas_ok, "ventas_rechazadas": rechazadas,
     }
+    modelo = copy.deepcopy(MODELO)
 
-    salida.mkdir(parents=True, exist_ok=True)
-    for nombre, df in tablas.items():
-        esperadas = [c["nombre"] for c in MODELO[nombre]["columnas"]]
-        assert list(df.columns) == esperadas, f"{nombre}: columnas {list(df.columns)} != {esperadas}"
-        df.to_csv(salida / f"{nombre}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-        MODELO[nombre]["filas"] = len(df)
-        print(f"  {nombre + '.csv':<28} {len(df):>5} filas")
-
-    for nombre, meta in MODELO.items():
+    for nombre, meta in modelo.items():
+        esperadas = [c["nombre"] for c in meta["columnas"]]
+        assert list(tablas[nombre].columns) == esperadas, f"{nombre}: {list(tablas[nombre].columns)} != {esperadas}"
         for c in meta["columnas"]:
             if c["fk"]:
                 tabla_ref, col_ref = c["fk"].split(".")
                 huerfanas = ~tablas[nombre][c["nombre"]].dropna().isin(set(tablas[tabla_ref][col_ref]))
                 assert not huerfanas.any(), f"Integridad referencial rota en {nombre}.{c['nombre']}"
 
+    for clave, descripcion in DESCRIPCION_ORIGEN.items():
+        nombre = f"origen_{clave}"
+        tablas[nombre] = fuente[clave].map(a_texto_crudo)
+        modelo[nombre] = {"dominio": "Datos de origen", "origen": True, "descripcion": descripcion,
+                          "columnas": [col(c, "texto", "Valor sin limpiar") for c in fuente[clave].columns]}
+    return tablas, modelo
+
+
+def exportar(id_fuente: str, nombre: str, descripcion: str, archivo: str,
+             cargar: Callable[[], dict[str, pd.DataFrame]]) -> dict:
+    calidad.clear()
+    fuente = cargar()
+    tablas, modelo = procesar(fuente)
+    carpeta = SALIDA / id_fuente
+    carpeta.mkdir(parents=True, exist_ok=True)
+    print(f"[{id_fuente}] {nombre}")
+    for tabla, df in tablas.items():
+        df.to_csv(carpeta / f"{tabla}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+        modelo[tabla]["filas"] = len(df)
+        print(f"  {tabla + '.csv':<28} {len(df):>5} filas")
     metadatos = {
+        "id": id_fuente, "nombre": nombre, "descripcion": descripcion, "fuente": archivo,
         "generado": datetime.now().isoformat(timespec="seconds"),
-        "fuente": excel.name,
-        "tablas": MODELO,
+        "tablas": modelo,
         "calidad": [q for q in calidad if q["filas_afectadas"] > 0],
     }
-    (salida / "modelo.json").write_text(json.dumps(metadatos, ensure_ascii=False, indent=2), encoding="utf-8")
+    (carpeta / "modelo.json").write_text(json.dumps(metadatos, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"  modelo.json  ({len(metadatos['calidad'])} hallazgos de calidad)")
-    print(f"Listo. Archivos en {salida}")
+    return {"id": id_fuente, "nombre": nombre, "descripcion": descripcion, "carpeta": id_fuente}
+
+
+def main() -> None:
+    fuentes = [
+        exportar("excel", "Excel trabajado",
+                 "Hojas del Excel después de la limpieza manual (Dataset_limpio_A1/A2 y hojas 2.10).",
+                 EXCEL.name, lambda: cargar_excel(EXCEL)),
+        exportar("original", "CSV originales",
+                 "Archivos originales antes de cualquier limpieza (carpeta dataoriginal).",
+                 f"{CARPETA_ORIGINAL.name}/*.csv", lambda: cargar_originales(CARPETA_ORIGINAL, EXCEL)),
+    ]
+    (SALIDA / "fuentes.json").write_text(json.dumps(fuentes, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Listo. fuentes.json con {len(fuentes)} fuentes en {SALIDA}")
 
 
 if __name__ == "__main__":
-    excel = Path(sys.argv[1]) if len(sys.argv) > 1 else EXCEL_DEFECTO
-    salida = Path(sys.argv[2]) if len(sys.argv) > 2 else SALIDA_DEFECTO
-    ejecutar(excel, salida)
+    main()

@@ -4,13 +4,21 @@ Proceso ETL que toma el Excel `Actividad 1 - Lavadero de datos.xlsx`, limpia y n
 (clientes, cartera financiera, productos, sucursales y ventas) y las exporta a CSV relacionados.
 Una web estática muestra las tablas, el modelo entidad-relación y el reporte de calidad de datos.
 
+El mismo proceso se aplica a dos fuentes, y la web permite alternar entre ellas y compararlas:
+
+- **Excel trabajado**: hojas del Excel después de la limpieza manual.
+- **CSV originales**: archivos de `web/data/dataoriginal`, antes de cualquier limpieza.
+
 ## Estructura
 
 ```
-etl/procesar_excel.py   Proceso Excel -> CSV + modelo.json
-web/                    Sitio estático (index.html, app.js, styles.css)
-web/data/               CSV generados y metadatos del modelo
-render.yaml             Configuración de despliegue en Render
+etl/procesar_excel.py    Proceso ETL para ambas fuentes -> CSV + modelo.json
+web/                     Sitio estático (index.html, app.js, styles.css)
+web/data/dataoriginal/   CSV originales sin limpiar (entrada)
+web/data/excel/          Resultado del ETL sobre el Excel
+web/data/original/       Resultado del ETL sobre los CSV originales
+web/data/fuentes.json    Listado de fuentes disponibles en la web
+render.yaml              Configuración de despliegue en Render
 ```
 
 ## Regenerar los CSV
