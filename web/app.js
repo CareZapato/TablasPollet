@@ -7,7 +7,10 @@ const COLOR_DOMINIO = {
   "Control de calidad": "var(--qa)",
   "Datos de origen": "var(--origen)",
 };
-const TIPO_MERMAID = { texto: "string", entero: "int", booleano: "bool", fecha: "date" };
+const ESTILO_FUENTE = {
+  excel: { color: "var(--primary)", detalle: "Después de la limpieza manual" },
+  original: { color: "#e07a1f", detalle: "Sin limpiar, tal como llegaron" },
+};
 
 const fuentes = {};
 
@@ -301,24 +304,155 @@ function renderTabla() {
 
 // ------------------------------------------------------------------ Modelo de datos
 
-function definicionMermaid(tablas) {
-  const lineas = ["erDiagram"];
-  for (const t of tablas) {
-    lineas.push(`  ${t} {`);
-    for (const c of meta(t).columnas) {
-      const llave = c.pk ? " PK" : c.fk ? " FK" : "";
-      lineas.push(`    ${TIPO_MERMAID[c.tipo] ?? "string"} ${c.nombre}${llave}`);
-    }
-    lineas.push("  }");
-  }
+// Posición [columna, fila] de cada tabla: Cartera a la izquierda, Geografía al centro, Comercial a la derecha.
+const LAYOUT_ER = {
+  productos_financieros: [0, 0], cuentas: [1, 0], regiones: [2, 0], segmentos: [3, 0], categorias: [4, 0],
+  estados_cuenta: [0, 1], cartera_clientes: [1, 1], ciudades: [2, 1], clientes: [3, 1], productos: [4, 1],
+  ventas_rechazadas: [0, 2], comunas: [2, 2], sucursales: [3, 2], ventas: [4, 2],
+  zonas_comerciales: [3, 3],
+};
+const ER = { ancho: 200, anchoCompleto: 236, sepX: 56, sepY: 54, cab: 28, fila: 20, margen: 16, zonaPad: 12, zonaTop: 26 };
+
+function columnasER(t, completo) {
+  const cols = meta(t).columnas;
+  return completo ? cols : cols.filter((c) => c.pk || c.fk);
+}
+
+function geometriaER(tablas, completo) {
+  let extra = 0;
+  const pos = Object.fromEntries(tablas.map((t) => [t, LAYOUT_ER[t] ?? [extra % 5, 4 + Math.floor(extra++ / 5)]]));
+  const ocultas = (t) => meta(t).columnas.length - columnasER(t, completo).length;
+  const alto = (t) => ER.cab + 6 + (columnasER(t, completo).length + (ocultas(t) ? 1 : 0)) * ER.fila + 4;
+  const nFilas = Math.max(...tablas.map((t) => pos[t][1])) + 1;
+  const altoFila = Array.from({ length: nFilas }, (_, r) => Math.max(0, ...tablas.filter((t) => pos[t][1] === r).map(alto)));
+  const yFila = [];
+  let y = ER.margen + ER.zonaTop;
+  for (let r = 0; r < nFilas; r++) { yFila[r] = y; y += altoFila[r] + ER.sepY; }
+  const nCols = Math.max(...tablas.map((t) => pos[t][0])) + 1;
+  const w = completo ? ER.anchoCompleto : ER.ancho;
+  const caja = Object.fromEntries(tablas.map((t) => [t, {
+    x: ER.margen + ER.zonaPad + pos[t][0] * (w + ER.sepX), y: yFila[pos[t][1]], w, h: alto(t),
+  }]));
+  return {
+    pos, caja, ocultas,
+    ancho: 2 * (ER.margen + ER.zonaPad) + nCols * w + (nCols - 1) * ER.sepX,
+    alto: y - ER.sepY + ER.zonaPad + ER.margen,
+  };
+}
+
+function svgTablaER(t, g, completo) {
+  const { x, y, w, h } = g.caja[t];
+  const m = meta(t);
+  const cols = columnasER(t, completo);
+  const filas = cols.map((c, i) => {
+    const cy = ER.cab + 6 + i * ER.fila;
+    const tipo = c.pk ? "pk" : c.fk ? "fk" : "";
+    const badge = tipo ? `<rect class="er-badge ${tipo}" x="8" y="${cy + 3}" width="22" height="14" rx="3"/>
+      <text class="er-badge-txt ${tipo}" x="19" y="${cy + 13.5}" text-anchor="middle">${tipo.toUpperCase()}</text>` : "";
+    return `<g><title>${c.nombre}: ${c.descripcion}${c.fk ? ` → ${c.fk}` : ""}</title>${badge}
+      <text class="er-col" x="${tipo ? 36 : 12}" y="${cy + 14}">${c.nombre}</text>
+      ${completo ? `<text class="er-tipo" x="${w - 10}" y="${cy + 14}" text-anchor="end">${c.tipo}</text>` : ""}</g>`;
+  }).join("");
+  const n = g.ocultas(t);
+  const mas = n ? `<text class="er-mas" x="12" y="${ER.cab + 6 + cols.length * ER.fila + 14}">+ ${n} columna${n > 1 ? "s" : ""} más</text>` : "";
+  return `<g class="er-tabla ${m.dominio === "Control de calidad" ? "cuarentena" : ""}" data-tabla="${t}"
+      transform="translate(${x},${y})" style="--dom:${COLOR_DOMINIO[m.dominio]}">
+    <title>${t} · ${m.descripcion}</title>
+    <rect class="er-caja" width="${w}" height="${h}" rx="8"/>
+    <path class="er-cab" d="M0,8 a8,8 0 0 1 8,-8 h${w - 16} a8,8 0 0 1 8,8 v${ER.cab - 8} h-${w} z"/>
+    <text class="er-titulo" x="10" y="18.5">${t}</text>
+    <text class="er-conteo" x="${w - 10}" y="18.5" text-anchor="end">${fmtNum.format(m.filas)}</text>
+    ${filas}${mas}</g>`;
+}
+
+function relacionesER(tablas, g, completo) {
+  const yCol = (t, nombre) => {
+    const i = Math.max(0, columnasER(t, completo).findIndex((c) => c.nombre === nombre));
+    return g.caja[t].y + ER.cab + 6 + i * ER.fila + ER.fila / 2;
+  };
+  const rels = [];
   for (const t of tablas) {
     for (const c of meta(t).columnas) {
       if (!c.fk) continue;
-      const ref = c.fk.split(".")[0];
-      if (tablas.includes(ref)) lineas.push(`  ${ref} ||--o{ ${t} : "${c.nombre}"`);
+      const [ref, refCol] = c.fk.split(".");
+      if (!g.caja[ref]) continue;
+      const a = g.caja[t], b = g.caja[ref];
+      let d;
+      if (g.pos[t][0] === g.pos[ref][0]) {
+        const x = a.x + a.w / 2;
+        d = a.y > b.y ? `M${x},${a.y} L${x},${b.y + b.h}` : `M${x},${a.y + a.h} L${x},${b.y}`;
+      } else {
+        const haciaDerecha = g.pos[ref][0] > g.pos[t][0];
+        const x1 = haciaDerecha ? a.x + a.w : a.x, y1 = yCol(t, c.nombre);
+        const x2 = haciaDerecha ? b.x : b.x + b.w, y2 = yCol(ref, refCol);
+        const dx = (x2 - x1) / 2;
+        d = `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+      }
+      rels.push(`<path class="er-rel" data-desde="${t}" data-hacia="${ref}" d="${d}"
+        marker-start="url(#er-muchos)" marker-end="url(#er-uno)"><title>${t}.${c.nombre} → ${c.fk}</title></path>`);
     }
   }
-  return lineas.join("\n");
+  return rels.join("");
+}
+
+function zonasER(tablas, g) {
+  const grupos = {};
+  for (const t of tablas) (grupos[meta(t).dominio] ??= []).push(g.caja[t]);
+  return Object.entries(grupos).map(([dom, cajas]) => {
+    const x = Math.min(...cajas.map((c) => c.x)) - ER.zonaPad;
+    const y = Math.min(...cajas.map((c) => c.y)) - ER.zonaTop;
+    const x2 = Math.max(...cajas.map((c) => c.x + c.w)) + ER.zonaPad;
+    const y2 = Math.max(...cajas.map((c) => c.y + c.h)) + ER.zonaPad;
+    return `<g class="er-zona" data-dominio="${dom}" style="--dom:${COLOR_DOMINIO[dom]}">
+      <rect x="${x}" y="${y}" width="${x2 - x}" height="${y2 - y}" rx="12"/>
+      <text x="${x + 12}" y="${y + 17}">${dom}</text></g>`;
+  }).join("");
+}
+
+function renderDiagrama() {
+  const completo = $("#er-completo").checked;
+  const tablas = tablasModelo();
+  const g = geometriaER(tablas, completo);
+  const svg = `<svg viewBox="0 0 ${g.ancho} ${g.alto}" style="max-width:${g.ancho}px" role="img" aria-label="Diagrama entidad-relación">
+    <defs>
+      <marker id="er-uno" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto">
+        <path d="M5,1 L5,11 M8.5,1 L8.5,11" stroke="#8f99ad" stroke-width="1.4"/></marker>
+      <marker id="er-muchos" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+        <path d="M3,6 L12,1 M3,6 L12,6 M3,6 L12,11" stroke="#8f99ad" stroke-width="1.4" fill="none"/></marker>
+    </defs>
+    ${zonasER(tablas, g)}
+    ${relacionesER(tablas, g, completo)}
+    ${tablas.map((t) => svgTablaER(t, g, completo)).join("")}
+  </svg>`;
+  const cont = $("#diagrama");
+  cont.innerHTML = svg;
+  const el = cont.querySelector("svg");
+
+  const dominio = $("#dominio-er").value;
+  const visibles = new Set(tablasDelDominio(dominio));
+  if (dominio !== "Todos") {
+    el.querySelectorAll(".er-tabla").forEach((n) => n.classList.toggle("atenuada", !visibles.has(n.dataset.tabla)));
+    el.querySelectorAll(".er-rel").forEach((n) =>
+      n.classList.toggle("atenuada", !visibles.has(n.dataset.desde) || !visibles.has(n.dataset.hacia)));
+    el.querySelectorAll(".er-zona").forEach((n) =>
+      n.classList.toggle("atenuada", !tablas.some((t) => visibles.has(t) && meta(t).dominio === n.dataset.dominio)));
+  }
+
+  el.querySelectorAll(".er-tabla").forEach((n) => {
+    const t = n.dataset.tabla;
+    n.addEventListener("mouseenter", () => {
+      el.classList.add("enfocado");
+      const relacionadas = new Set([t]);
+      el.querySelectorAll(".er-rel").forEach((r) => {
+        const toca = r.dataset.desde === t || r.dataset.hacia === t;
+        r.classList.toggle("rel", toca);
+        if (toca) { relacionadas.add(r.dataset.desde); relacionadas.add(r.dataset.hacia); }
+      });
+      el.querySelectorAll(".er-tabla").forEach((o) => o.classList.toggle("rel", relacionadas.has(o.dataset.tabla)));
+    });
+    n.addEventListener("mouseleave", () => el.classList.remove("enfocado"));
+    n.addEventListener("click", () => abrirTabla(t));
+  });
 }
 
 function tablasDelDominio(dominio) {
@@ -335,26 +469,14 @@ function tablasDelDominio(dominio) {
   return todas.filter((t) => set.has(t));
 }
 
-let mermaid = null;
-async function renderDiagrama() {
-  const dominio = $("#dominio-er").value;
-  const cont = $("#diagrama");
-  try {
-    mermaid ??= (await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs")).default;
-    mermaid.initialize({ startOnLoad: false, theme: "neutral", er: { useMaxWidth: false } });
-    const { svg } = await mermaid.render(`er-${Date.now()}`, definicionMermaid(tablasDelDominio(dominio)));
-    cont.innerHTML = svg;
-  } catch (e) {
-    cont.innerHTML = `<div class="error">No se pudo dibujar el diagrama (requiere conexión para cargar Mermaid).
-      El diccionario de datos de abajo describe las mismas relaciones.<br><small>${e.message}</small></div>`;
-  }
-}
-
 function renderModelo() {
   const dominios = ["Todos", ...Object.keys(tablasPorDominio(false)).filter((d) => d !== "Geografía")];
   const actual = $("#dominio-er").value;
-  $("#dominio-er").innerHTML = dominios.map((d) => `<option ${d === actual ? "selected" : ""}>${d}</option>`).join("");
+  $("#dominio-er").innerHTML = dominios.map((d) =>
+    `<option value="${d}" ${d === actual ? "selected" : ""}>${d === "Todos" ? "Resaltar: todas las áreas" : `Resaltar: ${d}`}</option>`).join("");
   $("#dominio-er").onchange = renderDiagrama;
+  $("#er-completo").onchange = renderDiagrama;
+  renderDiagrama();
 
   $("#diccionario").innerHTML = Object.entries(estado.modelo.tablas).filter(([, m]) => !m.origen).map(([nombre, m]) => `
     <div class="tarjeta" style="--dom:${COLOR_DOMINIO[m.dominio]}">
@@ -512,13 +634,11 @@ function renderGuia() {
 
 // ------------------------------------------------------------------ Navegación
 
-let diagramaDibujado = false;
 function mostrarVista(vista) {
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.vista === vista));
   document.querySelectorAll(".vista").forEach((s) => s.classList.toggle("active", s.id === `vista-${vista}`));
   history.replaceState(null, "", `#${vista}`);
   if (vista === "tablas" && !estado.tabla) abrirTabla("cartera_clientes");
-  if (vista === "modelo" && !diagramaDibujado) { diagramaDibujado = true; renderDiagrama(); }
 }
 
 function usarFuente(id) {
@@ -528,9 +648,17 @@ function usarFuente(id) {
   localStorage.setItem("fuente", id);
   document.body.dataset.fuente = id;
 
-  const generado = new Date(f.modelo.generado).toLocaleString("es-CL");
-  $("#fuente").textContent = `${f.descripcion} · ${f.modelo.fuente} · generado ${generado}`;
-  document.querySelectorAll("#selector-fuente button").forEach((b) => b.classList.toggle("active", b.dataset.fuente === id));
+  const generado = new Date(f.modelo.generado).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
+  const info = $("#fuente-info");
+  info.style.setProperty("--c", ESTILO_FUENTE[id]?.color ?? "var(--primary)");
+  info.innerHTML = `<span class="etiqueta-fuente">Viendo: ${f.nombre}</span>${f.descripcion}
+    · ${fmtNum.format(f.datos.cartera_clientes.length)} clientes de cartera · generado ${generado}`;
+  info.title = `${f.descripcion}\nArchivo: ${f.modelo.fuente}\nGenerado: ${generado}`;
+  document.querySelectorAll("#selector-fuente button").forEach((b) => {
+    const activo = b.dataset.fuente === id;
+    b.classList.toggle("active", activo);
+    b.setAttribute("aria-checked", activo);
+  });
   document.querySelectorAll(".fuente-activa").forEach((el) => { el.textContent = f.nombre; });
 
   renderResumen();
@@ -555,8 +683,11 @@ async function iniciar() {
     return;
   }
 
-  $("#selector-fuente").innerHTML = `<span class="muted">Fuente de datos</span>` +
-    ids.map((id) => `<button data-fuente="${id}" title="${fuentes[id].descripcion}">${fuentes[id].nombre}</button>`).join("");
+  $("#selector-fuente").innerHTML = ids.map((id) => `
+    <button role="radio" data-fuente="${id}" title="${fuentes[id].descripcion}" style="--c:${ESTILO_FUENTE[id]?.color ?? "var(--primary)"}">
+      <span class="punto"></span>
+      <span><b>${fuentes[id].nombre}</b><small>${ESTILO_FUENTE[id]?.detalle ?? fuentes[id].carpeta}</small></span>
+    </button>`).join("");
   document.querySelectorAll("#selector-fuente button").forEach((b) =>
     b.addEventListener("click", () => usarFuente(b.dataset.fuente)));
 

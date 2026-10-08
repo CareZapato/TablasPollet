@@ -8,21 +8,29 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="logo">▦</span>
-      <div>
-        <h1>Lavadero de datos</h1>
-        <p id="fuente" class="muted">Cargando…</p>
+    <div class="topbar-fila">
+      <div class="brand">
+        <span class="logo">▦</span>
+        <div>
+          <h1>Lavadero de datos</h1>
+          <p class="muted">ETL, modelo de datos y análisis de cartera, clientes y ventas</p>
+        </div>
+      </div>
+      <div class="fuente-panel">
+        <span class="fuente-etiqueta">Fuente de datos</span>
+        <div id="selector-fuente" class="selector-fuente" role="radiogroup" aria-label="Fuente de datos"></div>
       </div>
     </div>
-    <div id="selector-fuente" class="selector-fuente"></div>
-    <nav class="tabs">
-      <button data-vista="resumen" class="active">Resumen</button>
-      <button data-vista="tablas">Tablas</button>
-      <button data-vista="modelo">Modelo de datos</button>
-      <button data-vista="calidad">Calidad de datos</button>
-      <button data-vista="guia">Guía paso a paso</button>
-    </nav>
+    <div class="topbar-fila topbar-nav">
+      <nav class="tabs" aria-label="Secciones">
+        <button data-vista="resumen" class="active">Resumen</button>
+        <button data-vista="tablas">Tablas</button>
+        <button data-vista="modelo">Modelo de datos</button>
+        <button data-vista="calidad">Calidad de datos</button>
+        <button data-vista="guia">Guía paso a paso</button>
+      </nav>
+      <div id="fuente-info" class="fuente-info">Cargando…</div>
+    </div>
   </header>
 
   <main>
@@ -64,9 +72,18 @@
         <div class="panel-header">
           <div>
             <h2>Diagrama entidad-relación</h2>
-            <p class="muted">Modelo normalizado (3FN). Las líneas indican relaciones uno-a-muchos por clave foránea.</p>
+            <p class="muted">Modelo normalizado (3FN) agrupado por área. Pasa el mouse sobre una tabla para resaltar sus relaciones; haz clic para abrirla.</p>
           </div>
-          <select id="dominio-er"></select>
+          <div class="acciones">
+            <select id="dominio-er" aria-label="Área a resaltar"></select>
+            <label class="interruptor"><input id="er-completo" type="checkbox"> Todas las columnas</label>
+          </div>
+        </div>
+        <div class="er-leyenda">
+          <span><span class="key pk">PK</span> clave primaria</span>
+          <span><span class="key fk">FK</span> clave foránea</span>
+          <span><svg width="64" height="14" aria-hidden="true"><path d="M2,7 L62,7 M10,7 L2,2 M10,7 L2,12 M55,2 L55,12 M58,2 L58,12" stroke="#6b7489" stroke-width="1.4" fill="none"/></svg>
+            muchos a uno: la línea sale de la FK y llega a la PK de la tabla referenciada</span>
         </div>
         <div id="diagrama" class="diagrama"></div>
       </div>
